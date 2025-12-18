@@ -104,6 +104,25 @@ body {
     margin-bottom: 15px;
     color: #1f5c22;
   }
+
+  /* Orders */
+  .order-card {
+    border: 1px solid #e6e6e6;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: #fafafa;
+  }
+
+  .order-card h3 {
+    margin: 0 0 6px 0;
+    font-size: 1.05rem;
+  }
+
+  .order-card p { margin: 4px 0; font-size: 0.95rem; }
+  .order-card select { width: auto; display: inline-block; margin-right: 8px; }
+  .update-order { background: #2e7d32; padding: 6px 10px; border-radius: 6px; color: white; }
+
   
   input, select {
     width: 100%;
@@ -158,5 +177,17 @@ body {
     padding: 20px;
     border-radius: 12px;
     margin: 10% auto;
+  }
+
+  /* Responsive tweaks */
+  @media (max-width: 900px) {
+    .container { width: 92%; }
+    .grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+    .modal-content { width: 90%; margin-top: 20%; }
+  }
+
+  @media (max-width: 520px) {
+    header { font-size: 18px; padding: 14px; }
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   }
   

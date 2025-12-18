@@ -23,25 +23,50 @@ function displayCart() {
     const card = document.createElement("div");
     card.classList.add("cart-item");
     card.innerHTML = `
+      <button class="remove-x" data-index="${index}">✖</button>
       <img src="${item.image}" alt="${item.name}">
       <h3>${item.name}</h3>
       <p>${item.price}</p>
-      <button class="remove-btn" data-index="${index}">O‘chirish</button>
+      <div style="display:flex; gap:8px; justify-content:center; align-items:center; margin-top:8px;">
+        <label>Son: </label>
+        <input type="number" min="1" class="cart-qty" data-index="${index}" value="${item.quantity || 1}" />
+      </div>
     `;
     cartContainer.appendChild(card);
 
     const priceNumber = parseInt(item.price.replace(/[^\d]/g, ""));
-    total += priceNumber;
+    total += priceNumber * (item.quantity || 1);
   });
 
   totalPriceEl.textContent = `${total.toLocaleString()} so‘m`;
 
-  // Mahsulotni o‘chirish
+  // Mahsulotni o‘chirish (button)
   document.querySelectorAll(".remove-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       const idx = e.target.getAttribute("data-index");
       cart.splice(idx, 1);
       localStorage.setItem("cart", JSON.stringify(cart));
+      displayCart();
+    });
+  });
+
+  // Remove X button
+  document.querySelectorAll('.remove-x').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const idx = Number(e.target.getAttribute('data-index'));
+      cart.splice(idx, 1);
+      localStorage.setItem('cart', JSON.stringify(cart));
+      displayCart();
+    });
+  });
+
+  // Quantity change
+  document.querySelectorAll('.cart-qty').forEach((input) => {
+    input.addEventListener('change', (e) => {
+      const idx = Number(e.target.getAttribute('data-index'));
+      const val = Math.max(1, Number(e.target.value || 1));
+      cart[idx].quantity = val;
+      localStorage.setItem('cart', JSON.stringify(cart));
       displayCart();
     });
   });
@@ -72,6 +97,22 @@ orderBtn.addEventListener("click", () => {
   modal.style.display = "flex";
 });
 
+// show map preview
+const showMapBtn = document.getElementById('showMap');
+const mapWrap = document.getElementById('mapPreviewWrap');
+const mapIframe = document.getElementById('mapPreview');
+showMapBtn?.addEventListener('click', () => {
+  const locationVal = document.getElementById('location').value.trim();
+  const addressVal = document.getElementById('address').value.trim();
+  const q = encodeURIComponent(locationVal || addressVal);
+  if (!q) {
+    alert('Iltimos avval manzil yoki lokatsiyani kiriting');
+    return;
+  }
+  mapIframe.src = `https://www.google.com/maps?q=${q}&output=embed`;
+  mapWrap.style.display = 'block';
+});
+
 closeBtn.addEventListener("click", () => (modal.style.display = "none"));
 window.addEventListener("click", (e) => {
   if (e.target === modal) modal.style.display = "none";
@@ -93,23 +134,26 @@ orderForm.addEventListener("submit", (e) => {
   let total = 0;
   cart.forEach((item) => {
     const priceNum = parseInt(item.price.replace(/[^\d]/g, ""));
-    total += priceNum;
+    const qty = Number(item.quantity) || 1;
+    total += priceNum * qty;
   });
 
     // 🔹 Serverga yuborish (Telegramga backend orqali)
-    fetch("http://127.0.0.1:3000/api/order", {
+    const locationVal = document.getElementById('location')?.value.trim();
+    fetch((window.location.hostname === 'localhost' || window.location.hostname === '' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000/api/order' : '/api/order', {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
         phone,
         address,
+        location: locationVal || '',
         cart,
         total,
       }),
     })
   
-    .then((res) => {
+    .then(async (res) => {
       if (res.ok) {
         alert("✅ Buyurtmangiz yuborildi! Tez orada siz bilan bog‘lanamiz.");
         localStorage.removeItem("cart");
@@ -118,10 +162,14 @@ orderForm.addEventListener("submit", (e) => {
         modal.style.display = "none";
         orderForm.reset();
       } else {
-        alert("❌ Xatolik! Serverdan javob kelmadi.");
+        // server will return JSON error message for stock or validation
+        let err;
+        try { err = await res.json(); } catch (e) { err = { error: 'Server xatosi' }; }
+        alert("❌ Xatolik: " + (err.error || 'Server xatosi'));
       }
     })
-    .catch(() => {
-      alert("✅ Buyurtmangiz yuborildi! Tez orada siz bilan bog‘lanamiz.");
+    .catch((e) => {
+      console.error('Order submit error:', e);
+      alert("❌ Tarmoq xatosi. Iltimos qayta urinib ko‘ring.");
     });
 });

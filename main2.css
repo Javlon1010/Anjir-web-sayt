@@ -178,8 +178,19 @@ main {
   background-color: #256c45;
 }
 
-/* Footer */
-footer {
+/* Quantity input */
+.qty-input {
+  width: 60px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  margin-top: 8px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .qty-input { width: 48px; }
+}
   background-color: #2e7d32;
   color: white;
   text-align: center;

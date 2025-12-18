@@ -51,8 +51,15 @@
       <form id="orderForm">
         <input type="text" id="name" placeholder="Ismingiz" required />
         <input type="tel" id="phone" placeholder="Telefon raqamingiz" required />
-        <textarea id="address" placeholder="Manzilingiz" required></textarea>
-        <button type="submit" class="submit-btn">Buyurtmani yuborish</button>
+        <textarea id="address" placeholder="Manzilingiz (yoki qisqacha manzil)" required></textarea>
+        <input type="text" id="location" placeholder="Lokatsiya (optional: lat,lng yoki address)" />
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <button type="button" id="showMap" class="submit-btn" style="background:#1976d2;">Karta ko'rsat</button>
+          <button type="submit" class="submit-btn">Buyurtmani yuborish</button>
+        </div>
+        <div id="mapPreviewWrap" style="margin-top:10px; display:none;">
+          <iframe id="mapPreview" width="100%" height="250" style="border:1px solid #ccc; border-radius:8px;"></iframe>
+        </div>
       </form>
     </div>
   </div>

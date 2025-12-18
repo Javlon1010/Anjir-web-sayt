@@ -261,7 +261,7 @@
       }
     ],
     "total": 1468000,
-    "status": "Bekor qilindi",
+    "status": "Yangi",
     "date": "03/11/2025, 12:48:32"
   },
   {
@@ -336,7 +336,7 @@
       }
     ],
     "total": 12000,
-    "status": "Yangi",
+    "status": "Qabul qilingan",
     "date": "05/11/2025, 14:22:29"
   },
   {
@@ -361,7 +361,7 @@
       }
     ],
     "total": 36000,
-    "status": "Yangi",
+    "status": "Yetkazilmoqda",
     "date": "07/11/2025, 14:44:47"
   },
   {
@@ -681,5 +681,72 @@
     "total": 31000,
     "status": "Yangi",
     "date": "21/11/2025, 14:22:00"
+  },
+  {
+    "id": 1766051263177,
+    "name": "Javlonbek Qadamov",
+    "phone": "99999999",
+    "address": "Ogoxiy",
+    "cart": [
+      {
+        "_id": "6943bd15d64abacc509e3437",
+        "id": 63,
+        "name": "Olma 1kg",
+        "price": "10,000 so'm",
+        "image": "https://yukber.uz/image/cache/catalog/92dc230c321aa3574a5fd135269b378b-700x700.jpg",
+        "category": "Mevalar",
+        "__v": 0,
+        "createdAt": "2025-12-18T08:36:37.478Z",
+        "updatedAt": "2025-12-18T08:36:37.478Z"
+      },
+      {
+        "_id": "6943bd15d64abacc509e3438",
+        "id": 64,
+        "name": "Banan 1kg",
+        "price": "14,000 so'm",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/8/8a/Banana-Single.jpg",
+        "category": "Mevalar",
+        "__v": 0,
+        "createdAt": "2025-12-18T08:36:37.478Z",
+        "updatedAt": "2025-12-18T08:36:37.478Z"
+      },
+      {
+        "_id": "6943bd15d64abacc509e343b",
+        "id": 67,
+        "name": "Pomidor 1kg",
+        "price": "9,000 so'm",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/8/88/Bright_red_tomato_and_cross_section02.jpg",
+        "category": "Sabzavotlar",
+        "__v": 0,
+        "createdAt": "2025-12-18T08:36:37.478Z",
+        "updatedAt": "2025-12-18T08:36:37.478Z"
+      },
+      {
+        "_id": "6943bd15d64abacc509e343b",
+        "id": 67,
+        "name": "Pomidor 1kg",
+        "price": "9,000 so'm",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/8/88/Bright_red_tomato_and_cross_section02.jpg",
+        "category": "Sabzavotlar",
+        "__v": 0,
+        "createdAt": "2025-12-18T08:36:37.478Z",
+        "updatedAt": "2025-12-18T08:36:37.478Z"
+      },
+      {
+        "_id": "6943bd15d64abacc509e343b",
+        "id": 67,
+        "name": "Pomidor 1kg",
+        "price": "9,000 so'm",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/8/88/Bright_red_tomato_and_cross_section02.jpg",
+        "category": "Sabzavotlar",
+        "__v": 0,
+        "createdAt": "2025-12-18T08:36:37.478Z",
+        "updatedAt": "2025-12-18T08:36:37.478Z",
+        "quantity": 1
+      }
+    ],
+    "total": 51000,
+    "status": "Yangi",
+    "date": "18/12/2025, 14:47:43"
   }
 ]

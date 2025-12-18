@@ -3,6 +3,9 @@ const nameInput = document.getElementById("name");
 const priceInput = document.getElementById("price");
 const imageInput = document.getElementById("image");
 const categorySelect = document.getElementById("category");
+const adminFilterCategory = document.getElementById('adminFilterCategory');
+const adminSearch = document.getElementById('adminSearch');
+const adminFilterClear = document.getElementById('adminFilterClear');
 const statusMsg = document.getElementById("statusMsg");
 const container = document.getElementById("productContainer");
 
@@ -13,14 +16,76 @@ const editName = document.getElementById("editName");
 const editPrice = document.getElementById("editPrice");
 const editImage = document.getElementById("editImage");
 const editCategory = document.getElementById("editCategory");
+const editStock = document.getElementById("editStock");
 const saveEditBtn = document.getElementById("saveEditBtn");
 const closeEditBtn = document.getElementById("closeEditBtn");
 
-const API_URL = "http://localhost:3000/api/products";
+// API URL — use localhost during local development, otherwise use relative path for deployment
+const API_URL = (window.location.hostname === '' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:3000/api/products'
+  : '/api/products';
+
+// ➕ Yangi mahsulot qo'shish (admin)
+addBtn.addEventListener("click", async () => {
+  const name = nameInput.value.trim();
+  const price = priceInput.value.trim();
+  const image = imageInput.value.trim();
+  const category = categorySelect.value;
+  const stock = Number(document.getElementById('stock').value) || 35;
+
+  if (!name || !price || !image || !category) {
+    statusMsg.textContent = "Iltimos, hamma maydonlarni to‘ldiring";
+    return;
+  }
+
+  statusMsg.textContent = "Yuklanmoqda...";
+
+  try {
+    const res = await fetch(`${API_URL}/add`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, price, image, category, stock }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      statusMsg.textContent = "Mahsulot qo‘shildi!";
+      nameInput.value = "";
+      priceInput.value = "";
+      imageInput.value = "";
+      categorySelect.value = "";
+      document.getElementById('stock').value = 35;
+      adminFilterCategory.value = '';
+      adminSearch.value = '';
+      loadProducts({ category: '' });
+    } else {
+      statusMsg.textContent = "Xatolik: " + (data.error || "Noma'lum xatolik");
+    }
+  } catch (err) {
+    console.error(err);
+    statusMsg.textContent = "Serverga ulanishda xatolik";
+  }
+
+  setTimeout(() => (statusMsg.textContent = ""), 3000);
+});
 
 // 🟢 Mahsulotlarni chiqarish
-async function loadProducts() {
-  const res = await fetch(API_URL);
+async function loadProducts(options = {}) {
+  const { category, q } = options;
+
+  // Agar admin filter kategoriya bo'sh bo'lsa, hech narsa ko'rsatilmasin
+  if (typeof category !== 'undefined' && !category) {
+    container.innerHTML = "<p style='text-align:center;'>🔎 Iltimos, to‘g‘ri kategoriya tanlang</p>";
+    return;
+  }
+
+  const params = new URLSearchParams();
+  if (category) params.set('category', category);
+  if (q) params.set('q', q);
+
+  const url = `${API_URL}${params.toString() ? ('?' + params.toString()) : ''}`;
+  const res = await fetch(url);
   const products = await res.json();
 
   container.innerHTML = "";
@@ -32,7 +97,7 @@ async function loadProducts() {
       <img src="${p.image}" alt="${p.name}" />
       <h3>${p.name}</h3>
       <p>${p.price}</p>
-      <small>${p.category}</small><br>
+      <small>${p.category} · Qolgan: ${p.stock || 0} · Sotildi: ${p.sold || 0}</small><br>
 
       <button class="edit-btn" data-id="${p.id}">✏️ Tahrirlash</button>
       <button class="delete-btn" data-id="${p.id}">🗑 O‘chirish</button>
@@ -77,6 +142,7 @@ async function loadProducts() {
       editPrice.value = product.price;
       editImage.value = product.image;
       editCategory.value = product.category;
+      editStock.value = product.stock || 35;
 
       editModal.style.display = "block";
     });
@@ -91,6 +157,7 @@ saveEditBtn.addEventListener("click", async () => {
     price: editPrice.value.trim(),
     image: editImage.value.trim(),
     category: editCategory.value,
+    stock: Number(editStock.value) || 0,
   };
 
   const res = await fetch(`${API_URL}/edit`, {
@@ -115,5 +182,105 @@ closeEditBtn.addEventListener("click", () => {
   editModal.style.display = "none";
 });
 
+// � Kategoriyalarni yuklash
+async function loadCategories() {
+  try {
+    const res = await fetch((window.location.hostname === 'localhost' || window.location.hostname === '' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000/api/products/categories' : '/api/products/categories');
+    const cats = await res.json();
+    adminFilterCategory.innerHTML = '<option value="">— Kategoriya tanlang —</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    // add missing categories to add/edit selects if not present
+    const addOptions = Array.from(categorySelect.options).map(o => o.value);
+    cats.forEach(c => {
+      if (!addOptions.includes(c)) {
+        categorySelect.insertAdjacentHTML('beforeend', `<option value="${c}">${c}</option>`);
+        editCategory.insertAdjacentHTML('beforeend', `<option value="${c}">${c}</option>`);
+      }
+    });
+  } catch (err) {
+    console.error('loadCategories error:', err);
+  }
+}
+
+// Filter va search eventlari
+adminFilterCategory.addEventListener('change', () => {
+  const cat = adminFilterCategory.value;
+  loadProducts({ category: cat });
+});
+
+adminSearch.addEventListener('input', () => {
+  const q = adminSearch.value.trim();
+  const cat = adminFilterCategory.value;
+  loadProducts({ category: cat, q });
+});
+
+adminFilterClear.addEventListener('click', () => {
+  adminFilterCategory.value = '';
+  adminSearch.value = '';
+  loadProducts({ category: '' });
+});
+
 // 🚀 Dastlab yuklash
-loadProducts();
+loadCategories();
+loadProducts({ category: '' });
+loadOrders();
+// Auto-refresh orders every 8 seconds so admin sees incoming orders
+setInterval(loadOrders, 8000);
+
+// === Buyurtmalarni chiqarish va boshqarish ===
+async function loadOrders() {
+  try {
+    const res = await fetch((window.location.hostname === 'localhost' || window.location.hostname === '' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000/api/orders' : '/api/orders');
+    const orders = await res.json();
+
+    const ordersContainer = document.getElementById('ordersContainer');
+    ordersContainer.innerHTML = '';
+
+    if (!orders || orders.length === 0) {
+      ordersContainer.innerHTML = '<p>📭 Hozircha buyurtma yo‘q.</p>';
+      return;
+    }
+
+    orders.forEach((o) => {
+      const div = document.createElement('div');
+      div.classList.add('order-card');
+      div.innerHTML = `
+        <h3>Buyurtma #${o.id} — ${o.status}</h3>
+        <p><b>Ism:</b> ${o.name} | <b>Telefon:</b> ${o.phone}</p>
+        <p><b>Manzil:</b> ${o.address}</p>
+        <p><b>Jami:</b> ${o.total} so'm | <small>${o.date}</small></p>
+        <div><b>Mahsulotlar:</b> ${o.cart.map(i => `${i.name} x${i.quantity || 1}`).join(', ')}</div>
+        <div style="margin-top:8px;">
+          <select data-id="${o.id}" class="order-status-select">
+            <option ${o.status==='Yangi'? 'selected':''}>Yangi</option>
+            <option ${o.status==='Qabul qilingan'? 'selected':''}>Qabul qilingan</option>
+            <option ${o.status==='Yetkazilmoqda'? 'selected':''}>Yetkazilmoqda</option>
+            <option ${o.status==='Tugallandi'? 'selected':''}>Tugallandi</option>
+          </select>
+          <button class="update-order" data-id="${o.id}">Yangilash</button>
+        </div>
+      `;
+
+      ordersContainer.appendChild(div);
+    });
+
+    document.querySelectorAll('.update-order').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        const id = Number(e.target.getAttribute('data-id'));
+        const select = document.querySelector(`select[data-id="${id}"]`);
+        const status = select.value;
+
+        await fetch((window.location.hostname === 'localhost' || window.location.hostname === '' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000/api/orders/update' : '/api/orders/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status }),
+        });
+
+        alert('Buyurtma holati yangilandi');
+        loadOrders();
+      });
+    });
+
+  } catch (err) {
+    console.error('loadOrders error:', err);
+  }
+}

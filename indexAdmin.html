@@ -9,8 +9,12 @@
 </head>
 
 <body>
-  <header>
+  <header style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
     <h1>🛠 Anjir Supermarket — Admin Panel</h1>
+    <nav style="display:flex; gap:8px; align-items:center;">
+      <a href="indexAdmin.html" class="btn">Mahsulotlar</a>
+      <a href="index7.html" class="btn green">Buyurtmalar</a>
+    </nav>
   </header>
 
   <main class="container">
@@ -22,6 +26,7 @@
       <input type="text" id="name" placeholder="Mahsulot nomi">
       <input type="text" id="price" placeholder="Narxi (12,000 so‘m)">
       <input type="text" id="image" placeholder="Rasm URL manzili">
+      <input type="number" id="stock" min="0" value="35" placeholder="Soni (default 35)">
 
       <select id="category">
         <option value="">Kategoriyani tanlang</option>
@@ -50,6 +55,7 @@
         <input type="text" id="editName" placeholder="Mahsulot nomi">
         <input type="text" id="editPrice" placeholder="Narxi">
         <input type="text" id="editImage" placeholder="Rasm URL">
+        <input type="number" id="editStock" min="0" placeholder="Soni">
 
         <select id="editCategory">
           <option value="Ichimliklar">Ichimliklar</option>
@@ -72,7 +78,22 @@
     <!-- PRODUCT LIST -->
     <section class="card">
       <h2>📋 Mavjud mahsulotlar</h2>
+
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+        <select id="adminFilterCategory">
+          <option value="">— Kategoriya tanlang —</option>
+        </select>
+        <input id="adminSearch" type="text" placeholder="Mahsulot qidiruvi">
+        <button id="adminFilterClear" class="btn">Tozalash</button>
+      </div>
+
       <div id="productContainer" class="grid"></div>
+    </section>
+
+    <!-- ORDERS -->
+    <section class="card">
+      <h2>📥 Buyurtmalar</h2>
+      <div id="ordersContainer"></div>
     </section>
 
   </main>

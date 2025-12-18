@@ -17,3 +17,6 @@ Deploying to Vercel — quick notes
 4) Notes
 - `lib/mongoose.js` uses a connection cache to avoid multiple connections on serverless platforms.
 - Make sure the `MONGODB_URI` has access to your IPs if using a self-hosted database or correct whitelist settings on Atlas.
+
+5) Security note
+- **Do NOT put real credentials in `.env.example`**. Copy `.env.example` to `.env` and fill in your real `MONGODB_URI` there. `.env` is ignored by git in this project.
