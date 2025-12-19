@@ -34,11 +34,11 @@ addBtn.addEventListener("click", async () => {
   const stock = Number(document.getElementById('stock').value) || 35;
 
   if (!name || !price || !image || !category) {
-    statusMsg.textContent = "Iltimos, hamma maydonlarni to‘ldiring";
+    showToast({ message: "Iltimos, hamma maydonlarni to‘ldiring", type: 'warning' });
     return;
   }
 
-  statusMsg.textContent = "Yuklanmoqda...";
+  showToast({ message: "Yuklanmoqda...", type: 'info', timeout: 2000 });
 
   try {
     const res = await fetch(`${API_URL}/add`, {
@@ -50,38 +50,38 @@ addBtn.addEventListener("click", async () => {
     const data = await res.json();
 
     if (data.success) {
-      statusMsg.textContent = "Mahsulot qo‘shildi!";
+      showToast({ message: "Mahsulot qo‘shildi!", type: 'success' });
       nameInput.value = "";
       priceInput.value = "";
       imageInput.value = "";
       categorySelect.value = "";
       document.getElementById('stock').value = 35;
-      adminFilterCategory.value = '';
+      // show all products by default after adding
+      adminFilterCategory.value = 'Barchasi';
       adminSearch.value = '';
-      loadProducts({ category: '' });
+      loadProducts({ category: 'Barchasi' });
     } else {
-      statusMsg.textContent = "Xatolik: " + (data.error || "Noma'lum xatolik");
+      showToast({ message: "Xatolik: " + (data.error || "Noma'lum xatolik"), type: 'error' });
     }
   } catch (err) {
     console.error(err);
-    statusMsg.textContent = "Serverga ulanishda xatolik";
+    showToast({ message: "Serverga ulanishda xatolik", type: 'error' });
   }
-
-  setTimeout(() => (statusMsg.textContent = ""), 3000);
 });
 
 // 🟢 Mahsulotlarni chiqarish
 async function loadProducts(options = {}) {
   const { category, q } = options;
 
-  // Agar admin filter kategoriya bo'sh bo'lsa, hech narsa ko'rsatilmasin
-  if (typeof category !== 'undefined' && !category) {
+  // Agar admin filter kategoriya bo'sh string bo'lsa, hech narsa ko'rsatilmasin (placeholder tanlandi). "Barchasi" bo'lsa, hamma mahsulotlarni ko'rsatamiz
+  if (typeof category !== 'undefined' && category === '') {
     container.innerHTML = "<p style='text-align:center;'>🔎 Iltimos, to‘g‘ri kategoriya tanlang</p>";
     return;
   }
 
   const params = new URLSearchParams();
-  if (category) params.set('category', category);
+  // if category provided and not "Barchasi", filter by it; otherwise fetch all products
+  if (category && category !== 'Barchasi') params.set('category', category);
   if (q) params.set('q', q);
 
   const url = `${API_URL}${params.toString() ? ('?' + params.toString()) : ''}`;
@@ -132,7 +132,7 @@ async function loadProducts(options = {}) {
       const product = products.find((p) => Number(p.id) === id);
 
       if (!product) {
-        alert("Mahsulot topilmadi!");
+        showToast({ message: "Mahsulot topilmadi!", type: 'error' });
         return;
       }
 
@@ -169,11 +169,11 @@ saveEditBtn.addEventListener("click", async () => {
   const data = await res.json();
 
   if (data.success) {
-    alert("Mahsulot yangilandi!");
+    showToast({ message: "Mahsulot yangilandi!", type: 'success' });
     editModal.style.display = "none";
     loadProducts();
   } else {
-    alert("Xatolik: " + data.error);
+    showToast({ message: "Xatolik: " + data.error, type: 'error' });
   }
 });
 
@@ -187,7 +187,8 @@ async function loadCategories() {
   try {
     const res = await fetch((window.location.hostname === 'localhost' || window.location.hostname === '' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000/api/products/categories' : '/api/products/categories');
     const cats = await res.json();
-    adminFilterCategory.innerHTML = '<option value="">— Kategoriya tanlang —</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    // add a dedicated "Barchasi" option (shows all products when selected)
+    adminFilterCategory.innerHTML = '<option value="">— Kategoriya tanlang —</option><option value="Barchasi">Barchasi</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
     // add missing categories to add/edit selects if not present
     const addOptions = Array.from(categorySelect.options).map(o => o.value);
     cats.forEach(c => {
@@ -214,14 +215,15 @@ adminSearch.addEventListener('input', () => {
 });
 
 adminFilterClear.addEventListener('click', () => {
-  adminFilterCategory.value = '';
+  adminFilterCategory.value = 'Barchasi';
   adminSearch.value = '';
-  loadProducts({ category: '' });
+  loadProducts({ category: 'Barchasi' });
 });
 
 // 🚀 Dastlab yuklash
 loadCategories();
-loadProducts({ category: '' });
+// default: show all products in admin
+loadProducts({ category: 'Barchasi' });
 loadOrders();
 // Auto-refresh orders every 8 seconds so admin sees incoming orders
 setInterval(loadOrders, 8000);
@@ -275,7 +277,7 @@ async function loadOrders() {
           body: JSON.stringify({ id, status }),
         });
 
-        alert('Buyurtma holati yangilandi');
+        showToast({ message: 'Buyurtma holati yangilandi', type: 'success' });
         loadOrders();
       });
     });

@@ -10,51 +10,131 @@ async function loadProducts() {
     ? 'http://localhost:3000/api/products'
     : '/api/products';
 
-  const res = await fetch(API_BASE);
-  const products = await res.json();
+  try {
+    const res = await fetch(API_BASE);
+    const products = await res.json();
 
-  // Agar kategoriya tanlangan bo‘lsa — faqat o‘sha bo‘limni ko‘rsatamiz
-  const filtered = category && category !== "Barchasi"
-    ? products.filter(p => p.category === category)
-    : products;
+    // Filter by category if selected
+    const filtered = category && category !== "Barchasi"
+      ? products.filter(p => p.category === category)
+      : products;
 
-  if (filtered.length === 0) {
-    productList.innerHTML = `<p class="text-center text-muted">📭 Bu bo‘limda hozircha mahsulot yo‘q.</p>`;
-    return;
+    if (filtered.length === 0) {
+      productList.innerHTML = `<p class="text-center text-muted">📭 Bu bo'limda hozircha mahsulot yo'q.</p>`;
+      return;
+    }
+
+    // Group by out of stock status
+    const outOfStockProducts = filtered.filter(p => p.outOfStock || p.quantity <= 0);
+    const inStockProducts = filtered.filter(p => !p.outOfStock && p.quantity > 0);
+
+    // Display in-stock products first
+    let html = '';
+    
+    if (inStockProducts.length > 0) {
+      html += inStockProducts.map(p => `
+        <div class="product-card">
+          <img src="${p.image}" alt="${p.name}" onerror="this.src='img/placeholder.png'">
+          <h3>${p.name}</h3>
+          <p class="price">${p.price} so'm</p>
+          <div class="stock-info">
+            <span class="stock-badge ${p.quantity <= 3 ? 'low-stock' : ''}">
+              Qolgan: ${p.quantity} ta
+            </span>
+          </div>
+          <button class="add-btn" onclick='addToCart(${JSON.stringify(p)})'>
+            Savatga qo'shish
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // Display out-of-stock products with a different style
+    if (outOfStockProducts.length > 0) {
+      html += `
+        <div class="out-of-stock-section">
+          <h3>Tugagan mahsulotlar</h3>
+          <div class="out-of-stock-grid">
+            ${outOfStockProducts.map(p => `
+              <div class="product-card out-of-stock">
+                <img src="${p.image}" alt="${p.name}" onerror="this.src='img/placeholder.png'">
+                <h3>${p.name}</h3>
+                <p class="price">${p.price} so'm</p>
+                <div class="out-of-stock-badge">Tugagan</div>
+                <button class="add-btn" disabled>
+                  Mavjud emas
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    productList.innerHTML = html;
+  } catch (error) {
+    console.error('Error loading products:', error);
+    productList.innerHTML = `
+      <div class="error-message">
+        <p>Mahsulotlarni yuklashda xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.</p>
+        <button onclick="location.reload()">Qayta yuklash</button>
+      </div>
+    `;
   }
-
-  productList.innerHTML = filtered.map(p => `
-    <div class="product-card">
-      <img src="${p.image}" alt="${p.name}">
-      <h3>${p.name}</h3>
-      <p>${p.price}</p>
-      <div style="font-size:0.9em; color:#444; margin-bottom:6px">Qolgan: ${p.stock || 0}</div>
-      <button class="add-btn" ${ (p.stock||0) === 0 ? 'disabled' : '' } onclick='addToCart(${JSON.stringify(p)})'>${ (p.stock||0) === 0 ? 'Qolmagan' : 'Savatga' }</button>
-    </div>
-  `).join("");
 }
 
 function addToCart(product) {
-  if ((product.stock || 0) <= 0) {
-    alert(`"${product.name}" hozircha mavjud emas.`);
+  if (product.outOfStock || product.quantity <= 0) {
+    showToast({ message: `Kechirasiz, "${product.name}" hozirda sotuvda mavjud emas.`, type: 'error' });
     return;
   }
+  
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
-  const existing = cart.find(c => c.id === product.id);
-  if (existing) {
-    if ((existing.quantity || 1) + 1 > (product.stock || 0)) {
-      alert(`"${product.name}" dan yetarli miqdor qolmagan.`);
+  const existingItem = cart.find(item => item.id === product.id);
+  
+  if (existingItem) {
+    if (existingItem.quantity >= product.quantity) {
+      showToast({ 
+        message: `Kechirasiz, "${product.name}" dan faqat ${product.quantity} ta mavjud.`, 
+        type: 'warning' 
+      });
       return;
     }
-    existing.quantity = (existing.quantity || 1) + 1;
+    existingItem.quantity += 1;
   } else {
-    const item = Object.assign({}, product);
-    item.quantity = 1;
-    cart.push(item);
+    cart.push({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      category: product.category,
+      quantity: 1,
+      maxQuantity: product.quantity
+    });
   }
 
   localStorage.setItem("cart", JSON.stringify(cart));
-  alert("🛒 Mahsulot savatga qo‘shildi!");
+  updateCartCount();
+  
+  showToast({ 
+    message: `🛒 "${product.name}" savatga qo'shildi!`, 
+    type: 'success' 
+  });
 }
 
-loadProducts();
+// Update cart count in the header
+function updateCartCount() {
+  const cart = JSON.parse(localStorage.getItem("cart")) || [];
+  const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  const cartCount = document.getElementById('cart-count');
+  if (cartCount) {
+    cartCount.textContent = totalItems;
+    cartCount.style.display = totalItems > 0 ? 'inline-block' : 'none';
+  }
+}
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', () => {
+  loadProducts();
+  updateCartCount();
+});

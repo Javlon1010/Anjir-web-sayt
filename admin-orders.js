@@ -1,86 +1,261 @@
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '';
 
-async function loadOrders() {
-  const res = await fetch(`${API_BASE}/api/orders`);
-  const orders = await res.json();
+// Status colors and their order
+const statuses = [
+  { id: 'Yangi', name: 'Yangi', color: '#ffeb3b', next: 'Qabul qilindi' },
+  { id: 'Qabul qilindi', name: 'Qabul qilindi', color: '#2196f3', next: 'Yetkazilmoqda' },
+  { id: 'Yetkazilmoqda', name: 'Yetkazilmoqda', color: '#ff9800', next: 'Yetkazib berildi' },
+  { id: 'Yetkazib berildi', name: 'Yetkazib berildi', color: '#4caf50', next: null },
+  { id: 'Bekor qilindi', name: 'Bekor qilindi', color: '#f44336', next: null }
+];
 
-  const container = document.getElementById('ordersContainer');
-  container.innerHTML = '';
+// Format date
+function formatDate(dateString) {
+  const options = { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  };
+  return new Date(dateString).toLocaleDateString('uz-UZ', options);
+}
 
-  orders.forEach(o => {
-    const div = document.createElement('div');
-    div.classList.add('order-card');
-
-    // status color
-    let statusColor = '#ffeb3b';
-    if (o.status === 'Yangi') statusColor = '#ffeb3b';
-    if (o.status === 'Qabul qilingan') statusColor = '#2196f3';
-    if (o.status === 'Yetkazilmoqda') statusColor = '#ff9800';
-    if (o.status === 'Tugallandi') statusColor = '#4caf50';
-
-    div.innerHTML = `
-      <h3 style="color:${statusColor};">Buyurtma #${o.id} — ${o.status}</h3>
-      <p><b>Mijoz:</b> ${o.name} | <b>Tel:</b> ${o.phone} | <b>Manzil:</b> ${o.address}</p>
-      <p><button class="accept-order" data-id="${o.id}">Buyurtmani qabul qilish</button></p>
-      <div class="order-items" data-order-id="${o.id}" style="margin-top:8px;">${o.cart.map((it, idx) => `
-        <div class="order-item" data-item-id="${it.id}" data-order-id="${o.id}">
-          <b>${idx+1}.</b> ${it.name} x${it.quantity || 1}
-          <button class="item-action" data-order-id="${o.id}" data-item-id="${it.id}">Holat</button>
-          <span class="item-status">${it.status ? (it.status==='delivered' ? ' ✅' : ' ❌') : ''}</span>
+// Load and display orders
+async function loadOrders(showCompleted = false) {
+  try {
+    const res = await fetch(`${API_BASE}/api/orders?completed=${showCompleted}`);
+    const orders = await res.json();
+    const container = document.getElementById('ordersContainer');
+    
+    if (orders.length === 0) {
+      container.innerHTML = `
+        <div class="no-orders">
+          <p>Hozircha ${showCompleted ? 'tugallangan' : 'faol'} buyurtmalar mavjud emas</p>
         </div>
-      `).join('')}</div>
+      `;
+      return;
+    }
+
+    container.innerHTML = orders.map(order => {
+      const statusInfo = statuses.find(s => s.id === order.status) || statuses[0];
+      const total = order.cart.reduce((sum, item) => {
+        return sum + (parseInt(item.price.replace(/\D/g, '')) * (item.quantity || 1));
+      }, 0);
+
+      return `
+        <div class="order-card" data-order-id="${order.id}">
+          <div class="order-header">
+            <div class="order-meta">
+              <h3>Buyurtma #${order.orderNumber || order.id}</h3>
+              <span class="order-date">${formatDate(order.createdAt)}</span>
+            </div>
+            <div class="order-status" style="background-color: ${statusInfo.color}20; color: ${statusInfo.color};">
+              ${statusInfo.name}
+            </div>
+          </div>
+          
+          <div class="order-customer">
+            <p><strong>👤 Mijoz:</strong> ${order.name}</p>
+            <p><strong>📞 Telefon:</strong> ${order.phone}</p>
+            ${order.address ? `<p><strong>📍 Manzil:</strong> ${order.address}</p>` : ''}
+            ${order.location ? `<p><strong>📍 Joylashuv:</strong> ${order.location}</p>` : ''}
+          </div>
+          
+          <div class="order-items">
+            <h4>Buyurtma tarkibi:</h4>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Mahsulot</th>
+                  <th>Narxi</th>
+                  <th>Miqdori</th>
+                  <th>Jami</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${order.cart.map((item, index) => `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${item.name}</td>
+                    <td>${item.price} so'm</td>
+                    <td>${item.quantity || 1} ta</td>
+                    <td>${(parseInt(item.price.replace(/\D/g, '')) * (item.quantity || 1)).toLocaleString()} so'm</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4" style="text-align: right;"><strong>Umumiy summa:</strong></td>
+                  <td><strong>${total.toLocaleString()} so'm</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          
+          <div class="order-actions">
+            ${statusInfo.next ? `
+              <button class="btn btn-next" data-id="${order.id}" data-next="${statusInfo.next}">
+                ${statusInfo.next}
+              </button>
+            ` : ''}
+            
+            ${order.status !== 'Bekor qilindi' ? `
+              <button class="btn btn-cancel" data-id="${order.id}">
+                Bekor qilish
+              </button>
+            ` : ''}
+            
+            ${order.status === 'Yetkazib berildi' && !order.isCompleted ? `
+              <button class="btn btn-complete" data-id="${order.id}">
+                Buyurtmani yakunlash
+              </button>
+            ` : ''}
+            
+            <button class="btn btn-details" data-id="${order.id}">
+              Batafsil
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Attach event listeners
+    attachEventListeners();
+    
+  } catch (error) {
+    console.error('Error loading orders:', error);
+    document.getElementById('ordersContainer').innerHTML = `
+      <div class="error-message">
+        <p>Buyurtmalarni yuklashda xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.</p>
+        <button onclick="loadOrders()">Qayta yuklash</button>
+      </div>
     `;
+  }
+}
 
-    container.appendChild(div);
-  });
-
-  // attach handlers
-  document.querySelectorAll('.accept-order').forEach(btn => {
+// Attach event listeners to order actions
+function attachEventListeners() {
+  // Next status button
+  document.querySelectorAll('.btn-next').forEach(btn => {
     btn.addEventListener('click', async (e) => {
-      const id = Number(e.target.getAttribute('data-id'));
-      if (!confirm('Buyurtmani ishchilarga yubormoqchimisiz?')) return;
-      await fetch(`${API_BASE}/api/orders/notify-workers`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ orderId: id }) });
-      loadOrders();
+      const orderId = e.target.getAttribute('data-id');
+      const nextStatus = e.target.getAttribute('data-next');
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/orders/${orderId}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: nextStatus })
+        });
+        
+        if (response.ok) {
+          showToast({ message: 'Buyurtma holati yangilandi', type: 'success' });
+          loadOrders(document.querySelector('.tab.active')?.dataset.tab === 'completed');
+        } else {
+          throw new Error('Failed to update status');
+        }
+      } catch (error) {
+        console.error('Error updating order status:', error);
+        showToast({ message: 'Xatolik yuz berdi', type: 'error' });
+      }
     });
   });
-
-  document.querySelectorAll('.item-action').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const orderId = Number(btn.getAttribute('data-order-id'));
-      const itemId = Number(btn.getAttribute('data-item-id'));
-      const parent = btn.parentElement;
-
-      // disable the button so it can't be pressed again to show choices
-      btn.disabled = true;
-
-      const choices = document.createElement('span');
-      choices.innerHTML = ` <button class="mark-delivered" data-order-id="${orderId}" data-item-id="${itemId}">Mahsulot berildi</button> <button class="mark-notfound" data-order-id="${orderId}" data-item-id="${itemId}">Mahsulot topilmadi</button>`;
-      parent.appendChild(choices);
-
-      choices.querySelectorAll('.mark-delivered, .mark-notfound').forEach(c => {
-        c.addEventListener('click', async (ev) => {
-          const status = ev.target.classList.contains('mark-delivered') ? 'delivered' : 'not_found';
-          // send update
-          const res = await fetch(`${API_BASE}/api/orders/item-update`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ orderId, itemId, status }) });
-          const data = await res.json();
-          if (data.success) {
-            // show check or cross
-            const span = parent.querySelector('.item-status');
-            span.textContent = status==='delivered' ? ' ✅' : ' ❌';
-            // disable both choice buttons
-            choices.querySelectorAll('button').forEach(b => b.disabled = true);
-            // refresh orders to update overall status
-            setTimeout(loadOrders, 500);
-          } else {
-            alert('Xatolik: ' + (data.error || 'Server'));
-          }
+  
+  // Cancel order button
+  document.querySelectorAll('.btn-cancel').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      if (!confirm('Buyurtmani bekor qilishni istaysizmi?')) return;
+      
+      const orderId = e.target.getAttribute('data-id');
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/orders/${orderId}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'Bekor qilindi' })
         });
-      });
+        
+        if (response.ok) {
+          showToast({ message: 'Buyurtma bekor qilindi', type: 'success' });
+          loadOrders(document.querySelector('.tab.active')?.dataset.tab === 'completed');
+        } else {
+          throw new Error('Failed to cancel order');
+        }
+      } catch (error) {
+        console.error('Error cancelling order:', error);
+        showToast({ message: 'Xatolik yuz berdi', type: 'error' });
+      }
+    });
+  });
+  
+  // Complete order button
+  document.querySelectorAll('.btn-complete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      if (!confirm('Buyurtmani yakunlashni istaysizmi? Mahsulotlar soni avtomatik ravishda kamaytiriladi.')) return;
+      
+      const orderId = e.target.getAttribute('data-id');
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/orders/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          showToast({ 
+            message: `Buyurtma #${result.orderNumber} muvaffaqiyatli yakunlandi. Mahsulotlar soni yangilandi.`, 
+            type: 'success' 
+          });
+          loadOrders(document.querySelector('.tab.active')?.dataset.tab === 'completed');
+        } else {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to complete order');
+        }
+      } catch (error) {
+        console.error('Error completing order:', error);
+        showToast({ 
+          message: `Xatolik: ${error.message || 'Buyurtmani yakunlashda xatolik yuz berdi'}`, 
+          type: 'error' 
+        });
+      }
+    });
+  });
+  
+  // Toggle order details
+  document.querySelectorAll('.order-header').forEach(header => {
+    header.addEventListener('click', (e) => {
+      const orderCard = e.target.closest('.order-card');
+      if (orderCard) {
+        const details = orderCard.querySelector('.order-details');
+        if (details) {
+          details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        }
+      }
     });
   });
 }
 
-// initial
-loadOrders();
-// optional: auto refresh every 10s
-setInterval(loadOrders, 10000);
+// Toggle between active and completed orders
+document.addEventListener('DOMContentLoaded', () => {
+  // Tabs
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      loadOrders(tab.dataset.tab === 'completed');
+    });
+  });
+  
+  // Initial load
+  loadOrders();
+  
+  // Auto-refresh every 30 seconds
+  setInterval(() => {
+    loadOrders(document.querySelector('.tab.active')?.dataset.tab === 'completed');
+  }, 30000);
+});

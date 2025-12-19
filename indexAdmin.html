@@ -5,13 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Panel | Anjir Supermarket</title>
   <link rel="stylesheet" href="mainadmin.css" />
+  <script src="notify.js" defer></script>
   <script src="appadmin.js" defer></script>
 </head>
 
 <body>
-  <header style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
-    <h1>🛠 Anjir Supermarket — Admin Panel</h1>
-    <nav style="display:flex; gap:8px; align-items:center;">
+  <header class="admin-header">
+    <div class="admin-header-left">
+      <h1 class="admin-title">🛠 Anjir Supermarket</h1>
+      <div class="admin-subtitle">Admin Panel</div>
+    </div>
+    <nav class="admin-nav">
       <a href="indexAdmin.html" class="btn">Mahsulotlar</a>
       <a href="index7.html" class="btn green">Buyurtmalar</a>
     </nav>

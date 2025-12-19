@@ -1,47 +1,111 @@
+/* Base Styles */
+:root {
+  --primary: #2e7d32;
+  --primary-dark: #1b5e20;
+  --success: #4caf50;
+  --danger: #f44336;
+  --warning: #ff9800;
+  --info: #2196f3;
+  --text: #333;
+  --text-light: #666;
+  --border: #e0e0e0;
+  --bg-light: #f8f9fa;
+  --white: #ffffff;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --radius: 8px;
+  --transition: all 0.2s ease;
+}
+
 body {
-    font-family: "Poppins", sans-serif;
-    background: #f1f8e9;
-    margin: 0;
-    padding: 0;
-    color: #333;
-  }
-  
-  header {
-    background: #2e7d32;
-    color: white;
-    text-align: center;
-    padding: 15px;
-  }
-  
-  main {
-    max-width: 1000px;
-    margin: 20px auto;
-    padding: 20px;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .add-product select {
-    width: 100%;
-    padding: 10px;
-    margin: 8px 0;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-  }
-  
-  button {
-    background: #2e7d32;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 6px;
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+  background: #f5f7fa;
+  margin: 0;
+  padding: 0;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* Notifications */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 16px 24px;
+  border-radius: var(--radius);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: var(--shadow-md);
+  transform: translateX(120%);
+  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  max-width: 350px;
+  backdrop-filter: blur(10px);
+  background-color: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.notification.show {
+  transform: translateX(0);
+}
+
+/* Button Styles */
+.btn {
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(46, 139, 87, 0.18);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s;
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  margin: 4px 2px;
+}
+
+  /* Card / product actions */
+  .edit-btn {
+    background-color: #0ab24a;
+    color: #fcfcfc;
+    border: 1px solid #2e7d32;
+    padding: 8px 10px;
+    border-radius: 8px;
     cursor: pointer;
-    font-weight: 500;
+    transition: 0.1s;
+    margin-top: 1rem;
   }
+  .edit-btn:hover { 
+    background-color: rgba(8, 155, 0, 0.9);
+   color: rgb(10, 193, 44);
+   }
+
+  .delete-btn {
+    background: linear-gradient(135deg,#f0625d,#e53935);
+    color: white;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 1rem;
+  }
+
+  .delete-btn:hover { opacity: .95; }
+  .edit-btn:hover { background: rgba(255,255,255,0.95); }
   
-  button:hover {
-    background: #256c27;
+  .product-card {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 10px;
+    display: inline-block;
+    text-align: center;
+    width: 180px;
+    vertical-align: top;
   }
   
   .product-card {
@@ -190,4 +254,37 @@ body {
     header { font-size: 18px; padding: 14px; }
     .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   }
+
+  /* Toast notifications */
+  .toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 3000;
+  }
+  .toast {
+    min-width: 220px;
+    max-width: 360px;
+    background: white;
+    color: #222;
+    padding: 10px 12px;
+    border-radius: 10px;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.12);
+    transform: translateY(-8px) scale(.98);
+    opacity: 0;
+    transition: transform .18s ease, opacity .18s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .toast.show { opacity: 1; transform: translateY(0) scale(1); }
+  .toast .toast-body { flex: 1; padding-right: 8px; font-size: 0.95rem; }
+  .toast .toast-close { background: transparent; border: none; font-size: 18px; color: inherit; cursor: pointer; }
+  .toast-success { border-left: 5px solid #2e7d32; }
+  .toast-info { border-left: 5px solid #1976d2; }
+  .toast-warning { border-left: 5px solid #f57c00; }
+  .toast-error { border-left: 5px solid #c62828; }
   

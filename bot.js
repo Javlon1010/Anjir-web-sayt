@@ -1,4 +1,5 @@
 const express = require("express");
+
 const bodyParser = require("body-parser");
 const fetch = require("node-fetch");
 const cors = require("cors");
@@ -12,9 +13,47 @@ const PORT = process.env.PORT || 3000;
 
 // 🔐 Telegram ma'lumotlari
 const TOKEN = process.env.BOT_TOKEN;
-const CHAT_ID = "6652899566";
+const CHAT_ID = "1072558595";
 
 
+let bot = null;
+try {
+  // require lazily so app can still run even if the lib isn't installed in some environments
+  const TelegramBotLib = require('node-telegram-bot-api');
+  if (TOKEN) {
+    bot = new TelegramBotLib(TOKEN, { polling: true });
+
+    bot.on("message", (msg) => {
+      const chatId = msg.chat.id;
+      const firstName = msg.from.first_name || '';
+
+      if (msg.text === '/start') {
+        bot.sendMessage(chatId, `Salom, ${firstName}! Anjir admin botiga xush kelibsiz. Siz bu yerda buyurtmalarni boshqarishingiz mumkin.`);
+      }
+      else {
+        bot.sendMessage(chatId, `Kechirasiz, men faqatgina /start buyrug'ini tushunaman.`);
+      }
+    });
+  } else {
+    console.warn('⚠️ BOT_TOKEN mavjud emas — Telegram bot o‘chirildi');
+  }
+} catch (err) {
+  console.warn('node-telegram-bot-api yuklanmadi:', err && err.message ? err.message : err);
+}
+
+// Helpful polling error handler - gives actionable message when multiple instances run
+if (bot) {
+  bot.on('polling_error', (err) => {
+    console.error('polling_error:', err && err.code ? `${err.code} ${err.message}` : err);
+    if (err && err.code === 'ETELEGRAM') {
+      console.warn('⚠️ ETELEGRAM: multiple bot instances detected or polling conflict. Stop other bot instances or disable polling in one instance.');
+    }
+  });
+}
+
+// ======================================================
+// 🛠 ASOSIY SERVER KODI
+// ======================================================
 // 🔧 Middleware
 app.use(cors());
 app.use(bodyParser.json());
@@ -44,6 +83,7 @@ const productSchema = new mongoose.Schema({
 const Product = mongoose.models.Product || mongoose.model("Product", productSchema);
 // Order model (required early so we can check on startup)
 const Order = require('./models/Order');
+// Telegram bot library loaded lazily above when BOT_TOKEN is set
 
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(async () => {
@@ -130,8 +170,8 @@ app.post("/api/order", async (req, res) => {
       cart,
       total,
       status: "Yangi",
-      date: new Date().toLocaleString("uz-UZ"),
-      location: location || '',
+      date: new Date(), // Use Date object instead of string
+      location: location || null, // Use null instead of empty string
     });
 
     await orderDoc.save();
@@ -149,17 +189,34 @@ app.post("/api/order", async (req, res) => {
     text += `\n💰 <b>Jami:</b> ${total.toLocaleString()} so‘m`;
 
     try {
-      await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: CHAT_ID,
-          text,
-          parse_mode: "HTML",
-        }),
-      });
+      // send the admin message with inline keyboard (product buttons)
+      const adminKeyboard = buildOrderKeyboard(orderDoc);
+      if (bot && bot.sendMessage) {
+        await bot.sendMessage(CHAT_ID, text, { parse_mode: 'HTML', reply_markup: { inline_keyboard: adminKeyboard } });
+      } else {
+        await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: CHAT_ID,
+            text,
+            parse_mode: "HTML",
+            reply_markup: JSON.stringify({ inline_keyboard: adminKeyboard })
+          }),
+        });
+      }
     } catch (err) {
       console.error('Telegram send error:', err);
+    }
+
+    // Notify workers automatically (if configured)
+    try {
+      const notifyUrl = `http://localhost:${PORT}/api/orders/notify-workers`;
+      await fetch(notifyUrl, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: orderDoc.id })
+      });
+    } catch (err) {
+      console.error('notify-workers internal call error:', err);
     }
 
     res.json({ success: true });
@@ -236,6 +293,38 @@ app.post('/api/orders/item-update', async (req, res) => {
   }
 });
 
+// Helper: build inline keyboard rows for an order. If activeIndex is provided, that item's row will show action buttons.
+function buildOrderKeyboard(order, activeIndex = null) {
+  const rows = [];
+  order.cart.forEach((it, idx) => {
+    const baseText = `${idx+1}. ${it.name} x${it.quantity || 1}`;
+    if (it.status === 'delivered') {
+      rows.push([{ text: baseText + ' ✅', callback_data: 'noop' }]);
+    } else if (activeIndex === idx) {
+      // Show action buttons
+      rows.push([
+        { text: '✅ Mahsulot berildi', callback_data: `mark:${order.id}:${idx}:delivered` },
+        { text: '❌ Mahsulot topilmadi', callback_data: `mark:${order.id}:${idx}:not_found` }
+      ]);
+    } else {
+      const statusSuffix = it.status === 'not_found' ? ' ❌' : '';
+      rows.push([{ text: baseText + statusSuffix, callback_data: `open:${order.id}:${idx}` }]);
+    }
+  });
+  return rows;
+}
+
+// Helper: get sequential order id using counters collection
+async function getNextOrderId() {
+  const coll = mongoose.connection.collection('counters');
+  const res = await coll.findOneAndUpdate(
+    { _id: 'orderid' },
+    { $inc: { seq: 1 } },
+    { upsert: true, returnDocument: 'after' }
+  );
+  return res && res.value && res.value.seq ? res.value.seq : 1;
+}
+
 // ➕ Notify workers about an order
 app.post('/api/orders/notify-workers', async (req, res) => {
   try {
@@ -250,10 +339,17 @@ app.post('/api/orders/notify-workers', async (req, res) => {
 
     for (const wid of workerIds) {
       try {
-        await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: wid, text, parse_mode: 'HTML' })
-        });
+        // If our node-telegram-bot-api bot is available, send interactive message with inline keyboard
+        const keyboard = buildOrderKeyboard(order);
+        if (bot && bot.sendMessage) {
+          await bot.sendMessage(wid, text, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
+        } else {
+          // fallback: plain send without keyboard
+          await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: wid, text, parse_mode: 'HTML' })
+          });
+        }
       } catch (err) { console.error('Error sending to worker', wid, err); }
     }
 
@@ -296,6 +392,63 @@ app.post('/api/test/notify', async (req, res) => {
   }
 
   res.json({ success: true, workerIds });
+});
+
+// Quick test endpoint: send an interactive order message to any chatId for testing
+// POST /api/test/send-order { chatId: number|string, orderId?: number }
+app.post('/api/test/send-order', async (req, res) => {
+  try {
+    const { chatId, orderId } = req.body;
+    if (!chatId) return res.status(400).json({ error: 'chatId is required' });
+
+    let order = null;
+    if (orderId) order = await Order.findOne({ id: Number(orderId) });
+
+    if (!order) {
+      // sample order payload
+      order = {
+        id: Date.now(),
+        name: 'Test Mijoz',
+        phone: '000000000',
+        address: 'Test manzil',
+        cart: [
+          { id: 101, name: 'Olma', quantity: 2, status: '' },
+          { id: 102, name: 'Sut', quantity: 1, status: '' },
+          { id: 103, name: 'Non', quantity: 3, status: '' }
+        ]
+      };
+    }
+
+    const text = `📣 <b>Yangi ish (test):</b> Buyurtma ${order.id}\nMijoz: ${order.name} — ${order.phone}\nManzil: ${order.address}\n\nMahsulotlar:\n` + order.cart.map((it, idx) => `${idx+1}. ${it.name} x${it.quantity || 1}`).join('\n');
+    const keyboard = buildOrderKeyboard(order);
+
+    if (bot && bot.sendMessage) {
+      await bot.sendMessage(String(chatId), text, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
+    } else {
+      // fallback: send via HTTP API (serialize reply_markup)
+      await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', reply_markup: JSON.stringify({ inline_keyboard: keyboard }) })
+      });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('POST /api/test/send-order error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Test bot status endpoint
+app.get('/api/test/bot-status', async (req, res) => {
+  if (!bot) return res.json({ botActive: false, message: 'Bot not initialized (BOT_TOKEN missing or bot lib not available).' });
+  try {
+    const me = await bot.getMe();
+    res.json({ botActive: true, username: me.username || me.first_name || null });
+  } catch (err) {
+    console.error('bot.getMe error:', err);
+    res.json({ botActive: false, message: err && err.code === 'ETELEGRAM' ? 'ETELEGRAM polling conflict detected. Ensure only one bot instance is running.' : 'Error reaching Telegram API' });
+  }
 });
 
 // ======================================================
@@ -393,9 +546,85 @@ app.post("/api/products/edit", async (req, res) => {
   }
 });
 
+// Callback handlers for Telegram interactive messages (only if bot is active)
+if (bot) {
+  bot.on('callback_query', async (q) => {
+    try {
+      const data = q.data || '';
+      const chatId = q.message && q.message.chat ? q.message.chat.id : null;
+      const messageId = q.message && q.message.message_id ? q.message.message_id : null;
+
+      if (!data) return bot.answerCallbackQuery(q.id, { text: 'No data', show_alert: false });
+      if (data === 'noop') return bot.answerCallbackQuery(q.id, { text: 'Bu element allaqachon belgilangan', show_alert: false });
+
+      const parts = data.split(':');
+      if (parts[0] === 'open') {
+        const orderId = Number(parts[1]);
+        const idx = Number(parts[2]);
+        const order = await Order.findOne({ id: orderId });
+        if (!order) return bot.answerCallbackQuery(q.id, { text: 'Buyurtma topilmadi', show_alert: true });
+
+        const keyboard = buildOrderKeyboard(order, idx);
+        try { await bot.editMessageReplyMarkup({ inline_keyboard: keyboard }, { chat_id: chatId, message_id: messageId }); } catch (e) { /* ignore edit errors */ }
+        return bot.answerCallbackQuery(q.id, { text: 'Tanlang: ✅ Mahsulot berildi yoki ❌ Mahsulot topilmadi', show_alert: false });
+      }
+
+      if (parts[0] === 'mark') {
+        const orderId = Number(parts[1]);
+        const idx = Number(parts[2]);
+        const action = parts[3];
+
+        const order = await Order.findOne({ id: orderId });
+        if (!order) return bot.answerCallbackQuery(q.id, { text: 'Buyurtma topilmadi', show_alert: true });
+        const item = order.cart[idx];
+        if (!item) return bot.answerCallbackQuery(q.id, { text: 'Mahsulot topilmadi', show_alert: true });
+
+        if (action === 'delivered') {
+          if (item.status === 'delivered') return bot.answerCallbackQuery(q.id, { text: 'Allaqachon belgilangan', show_alert: false });
+          item.status = 'delivered';
+          await order.save();
+
+          // if all resolved, mark order complete and notify admin
+          const allResolved = order.cart.every(i => i.status === 'delivered' || i.status === 'not_found');
+          if (allResolved) {
+            order.status = 'Tugallandi';
+            await order.save();
+            try {
+              const completeText = `✅ <b>Buyurtma ${order.id} tugallandi</b>\nMijoz: ${order.name} | ${order.phone} | ${order.address}`;
+              if (bot && bot.sendMessage) await bot.sendMessage(CHAT_ID, completeText, { parse_mode: 'HTML' });
+            } catch (e) { console.error('Telegram notify complete error:', e); }
+          }
+
+          const keyboard = buildOrderKeyboard(order, null);
+          try { await bot.editMessageReplyMarkup({ inline_keyboard: keyboard }, { chat_id: chatId, message_id: messageId }); } catch (e) { /* ignore */ }
+          return bot.answerCallbackQuery(q.id, { text: 'Mahsulot belgilandi ✅', show_alert: false });
+        }
+
+        if (action === 'not_found') {
+          // toggle not_found
+          item.status = item.status === 'not_found' ? '' : 'not_found';
+          await order.save();
+
+          const keyboard = buildOrderKeyboard(order, null);
+          try { await bot.editMessageReplyMarkup({ inline_keyboard: keyboard }, { chat_id: chatId, message_id: messageId }); } catch (e) { /* ignore */ }
+          return bot.answerCallbackQuery(q.id, { text: item.status === 'not_found' ? 'Mahsulot topilmadi ❌' : 'Belgisi olib tashlandi', show_alert: false });
+        }
+
+        return bot.answerCallbackQuery(q.id, { text: "Noma'lum amal", show_alert: true });
+      }
+
+      // fallback
+      return bot.answerCallbackQuery(q.id, { text: "Noma'lum amal", show_alert: true });
+    } catch (err) {
+      console.error('callback_query error:', err);
+    }
+  });
+}
+
 // ======================================================
 // 🚀 SERVERNI ISHGA TUSHIRISH
 // ======================================================
 app.listen(PORT, () => {
   console.log(`🚀 Server ${PORT}-portda ishga tushdi!`);
+  console.log(` 🤖 Bot ishga tushdi`);
 });

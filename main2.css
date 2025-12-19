@@ -53,6 +53,71 @@ body {
   cursor: pointer;
 }
 
+/* Unified button styles used across the site */
+.btn {
+  display: inline-block;
+  background: linear-gradient(135deg,#2e8b57,#44c28b);
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 6px 14px rgba(46,139,87,0.14);
+  transition: transform 0.14s ease, box-shadow .14s ease;
+}
+
+.btn:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(46,139,87,0.18); }
+
+.add-btn {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg,#2e7d32,#256c27);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Toast notifications */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 3000;
+}
+
+.toast {
+  min-width: 220px;
+  max-width: 360px;
+  background: white;
+  color: #222;
+  padding: 10px 12px;
+  border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.12);
+  transform: translateY(-8px) scale(.98);
+  opacity: 0;
+  transition: transform .18s ease, opacity .18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toast.show { opacity: 1; transform: translateY(0) scale(1); }
+.toast .toast-body { flex: 1; padding-right: 8px; font-size: 0.95rem; }
+.toast .toast-close { background: transparent; border: none; font-size: 18px; color: inherit; cursor: pointer; }
+
+.toast-success { border-left: 5px solid #2e7d32; }
+.toast-info { border-left: 5px solid #1976d2; }
+.toast-warning { border-left: 5px solid #f57c00; }
+.toast-error { border-left: 5px solid #c62828; }
+
 /* 🔍 Qidiruv paneli */
 .search-bar {
   text-align: center;
@@ -189,14 +254,18 @@ main {
 }
 
 @media (max-width: 768px) {
-  .qty-input { width: 48px; }
-}
-  background-color: #2e7d32;
-  color: white;
-  text-align: center;
-  padding: 15px 0;
-  margin-top: 40px;
-  font-size: 14px;
+  .qty-input {
+    width: 48px;
+  }
+
+  .search-bar {
+    background-color: #2e7d32;
+    color: white;
+    text-align: center;
+    padding: 15px 0;
+    margin-top: 40px;
+    font-size: 14px;
+  }
 }
 
 /* ===== Responsivlik ===== */

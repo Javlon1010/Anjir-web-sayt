@@ -8,13 +8,26 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { name, price, image, category } = req.body;
-    if (!name || !price || !image || !category) {
-      return res.status(400).json({ error: "Ma'lumotlar to‘liq emas" });
+    const { name, price, image, category, quantity } = req.body;
+    if (!name || !price || !image || !category || quantity === undefined) {
+      return res.status(400).json({ error: "Barcha maydonlarni to'ldiring" });
+    }
+
+    const quantityNum = parseInt(quantity, 10);
+    if (isNaN(quantityNum) || quantityNum < 0) {
+      return res.status(400).json({ error: "Noto'g'ri miqdor kiritildi" });
     }
 
     await connect();
-    const newProduct = new Product({ id: Date.now(), name, price, image, category });
+    const newProduct = new Product({ 
+      id: Date.now(), 
+      name, 
+      price, 
+      image, 
+      category,
+      quantity: quantityNum,
+      outOfStock: quantityNum <= 0
+    });
     await newProduct.save();
 
     res.status(201).json({ success: true, product: newProduct });
