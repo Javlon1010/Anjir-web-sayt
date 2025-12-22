@@ -8,7 +8,7 @@ const adminSearch = document.getElementById('adminSearch');
 const adminFilterClear = document.getElementById('adminFilterClear');
 const statusMsg = document.getElementById("statusMsg");
 const container = document.getElementById("productContainer");
-
+// Toast xabarnoma funksiyasi
 // ✏️ Edit modal elementlar
 const editModal = document.getElementById("editModal");
 const editId = document.getElementById("editId");
