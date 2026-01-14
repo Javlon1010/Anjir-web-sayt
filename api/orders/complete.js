@@ -21,6 +21,9 @@ module.exports = async function handler(req, res) {
     });
   } catch (err) {
     console.error('POST /api/orders/complete error:', err);
+    if (err && err.message && err.message.includes('Read-only deployment')) {
+      return res.status(501).json({ error: err.message });
+    }
     res.status(500).json({ 
       error: 'Buyurtmani yakunlashda xatolik yuz berdi',
       details: err.message 

@@ -17,6 +17,9 @@ module.exports = async function handler(req, res) {
     res.status(200).json({ success: true, product });
   } catch (err) {
     console.error('POST /api/products/edit error:', err);
+    if (err && err.message && err.message.includes('Read-only deployment')) {
+      return res.status(501).json({ error: err.message });
+    }
     res.status(500).json({ error: 'Server error' });
   }
 };

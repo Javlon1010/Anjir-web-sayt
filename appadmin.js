@@ -111,11 +111,22 @@ async function loadProducts(options = {}) {
     btn.addEventListener("click", async (e) => {
       const id = Number(e.target.dataset.id);
 
-      await fetch(`${API_URL}/delete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
+      try {
+        const res = await fetch(`${API_URL}/delete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          showToast({ message: "Xatolik: " + (data.error || "Noma'lum xato"), type: 'error' });
+        } else {
+          showToast({ message: "Mahsulot o‘chirildi", type: 'success' });
+        }
+      } catch (err) {
+        console.error('Delete product error:', err);
+        showToast({ message: "Serverga ulanishda xatolik", type: 'error' });
+      }
 
       loadProducts();
     });
@@ -189,6 +200,8 @@ async function loadCategories() {
     const cats = await res.json();
     // add a dedicated "Barchasi" option (shows all products when selected)
     adminFilterCategory.innerHTML = '<option value="">— Kategoriya tanlang —</option><option value="Barchasi">Barchasi</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    // Set default to show all products so admin doesn't accidentally land on placeholder
+    adminFilterCategory.value = 'Barchasi';
     // add missing categories to add/edit selects if not present
     const addOptions = Array.from(categorySelect.options).map(o => o.value);
     cats.forEach(c => {
@@ -227,6 +240,23 @@ loadProducts({ category: 'Barchasi' });
 loadOrders();
 // Auto-refresh orders every 8 seconds so admin sees incoming orders
 setInterval(loadOrders, 8000);
+
+// Check server info (read-only deployments on platforms like Vercel)
+async function checkServerInfo() {
+  try {
+    const res = await fetch('/api/server-info');
+    if (!res.ok) return;
+    const info = await res.json();
+    if (info.readOnlyFiles) {
+      if (statusMsg) statusMsg.innerHTML = '<strong style="color:#b71c1c">Eslatma:</strong> Bu muhit yozish uchun mos emas (suziladigan hosting). Mahsulotlar va buyurtmalarni tahrirlash uchun MONGODB_URI sozlang.';
+      showToast({ message: 'Server deployi read-only rejimda: MONGODB_URI sozlang persistence uchun', type: 'warning', timeout: 8000 });
+    }
+  } catch (err) {
+    // ignore
+  }
+}
+
+checkServerInfo();
 
 // === Buyurtmalarni chiqarish va boshqarish ===
 async function loadOrders() {
@@ -284,5 +314,11 @@ async function loadOrders() {
 
   } catch (err) {
     console.error('loadOrders error:', err);
+    const ordersContainer = document.getElementById('ordersContainer');
+    if (ordersContainer) {
+      ordersContainer.innerHTML = `<div class="error-message">
+        <p>Buyurtmalarni yuklashda xatolik yuz berdi: ${err && err.message ? err.message : 'Serverga ulanishda xatolik'}</p>
+      </div>`;
+    }
   }
 }
