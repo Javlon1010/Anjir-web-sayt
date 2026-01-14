@@ -1,5 +1,8 @@
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '';
 
+// Server mode flag (set by /api/server-info)
+let serverReadOnly = false;
+
 // Status colors and their order
 const statuses = [
   { id: 'Yangi', name: 'Yangi', color: '#ffeb3b', next: 'Qabul qilindi' },
@@ -80,10 +83,16 @@ async function loadOrders(showCompleted = false) {
                       <button class="item-btn" data-order-id="${order.id}" data-item-idx="${index}" ${item.status==='delivered' ? 'disabled' : ''}>
                         ${item.name} ${item.status==='delivered' ? ' ✅' : (item.status==='not_found' ? ' ❌' : '')}
                       </button>
-                      <div class="item-actions" data-order-id="${order.id}" data-item-idx="${index}" style="display:none; margin-top:8px;">
-                        <button class="item-action-btn green item-action-delivered" data-order-id="${order.id}" data-item-idx="${index}">✅ Mahsulot berildi</button>
-                        <button class="item-action-btn red item-action-notfound" data-order-id="${order.id}" data-item-idx="${index}">${item.status==='not_found' ? '🔁 Bekor qilish' : '❌ Mahsulot topilmadi'}</button>
-                      </div>
+                      ${serverReadOnly ? `
+                        <div class="item-actions" data-order-id="${order.id}" data-item-idx="${index}" style="display:none; margin-top:8px; color:#b71c1c;">
+                          Bu deploy yozish uchun mos emas — item holatini o‘zgartirish mumkin emas
+                        </div>
+                      ` : `
+                        <div class="item-actions" data-order-id="${order.id}" data-item-idx="${index}" style="display:none; margin-top:8px;">
+                          <button class="item-action-btn green item-action-delivered" data-order-id="${order.id}" data-item-idx="${index}">✅ Mahsulot berildi</button>
+                          <button class="item-action-btn red item-action-notfound" data-order-id="${order.id}" data-item-idx="${index}">${item.status==='not_found' ? '🔁 Bekor qilish' : '❌ Mahsulot topilmadi'}</button>
+                        </div>
+                      `}
                     </td>
                     <td>${item.price} so'm</td>
                     <td>${item.quantity || 1} ta</td>
@@ -101,27 +110,34 @@ async function loadOrders(showCompleted = false) {
           </div>
           
           <div class="order-actions">
-            ${statusInfo.next ? `
-              <button class="btn btn-next" data-id="${order.id}" data-next="${statusInfo.next}">
-                ${statusInfo.next}
+            ${serverReadOnly ? `
+              <div style="color:#b71c1c; font-weight:600;">Ushbu deploy yozish uchun mos emas — buyurtma holatini o‘zgartirish mumkin emas</div>
+              <button class="btn btn-details" data-id="${order.id}">
+                Batafsil
               </button>
-            ` : ''}
-            
-            ${order.status !== 'Bekor qilindi' ? `
-              <button class="btn btn-cancel" data-id="${order.id}">
-                Bekor qilish
+            ` : `
+              ${statusInfo.next ? `
+                <button class="btn btn-next" data-id="${order.id}" data-next="${statusInfo.next}">
+                  ${statusInfo.next}
+                </button>
+              ` : ''}
+              
+              ${order.status !== 'Bekor qilindi' ? `
+                <button class="btn btn-cancel" data-id="${order.id}">
+                  Bekor qilish
+                </button>
+              ` : ''}
+              
+              ${order.status === 'Yetkazib berildi' && !order.isCompleted ? `
+                <button class="btn btn-complete" data-id="${order.id}">
+                  Buyurtmani yakunlash
+                </button>
+              ` : ''}
+              
+              <button class="btn btn-details" data-id="${order.id}">
+                Batafsil
               </button>
-            ` : ''}
-            
-            ${order.status === 'Yetkazib berildi' && !order.isCompleted ? `
-              <button class="btn btn-complete" data-id="${order.id}">
-                Buyurtmani yakunlash
-              </button>
-            ` : ''}
-            
-            <button class="btn btn-details" data-id="${order.id}">
-              Batafsil
-            </button>
+            `}
           </div>
         </div>
       `;
@@ -334,7 +350,19 @@ function attachEventListeners() {
 }
 
 // Toggle between active and completed orders
-document.addEventListener('DOMContentLoaded', () => {
+async function checkServerInfo() {
+  try {
+    const res = await fetch(`${API_BASE}/api/server-info`);
+    if (!res.ok) return;
+    const info = await res.json();
+    if (info.readOnlyFiles) {
+      serverReadOnly = true;
+      showToast({ message: 'Eslatma: ushbu deploy yozish uchun mos emas — buyurtma o‘zgartirishlar saqlanmaydi', type: 'warning', timeout: 6000 });
+    }
+  } catch (err) { /* ignore */ }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
   // Tabs
   const tabs = document.querySelectorAll('.tab');
   tabs.forEach(tab => {
@@ -345,7 +373,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
-  // Initial load
+  // Check server first, then load orders so UI reflects read-only mode
+  await checkServerInfo();
   loadOrders();
   
   // Auto-refresh every 30 seconds

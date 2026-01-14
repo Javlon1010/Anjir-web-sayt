@@ -8,6 +8,9 @@ const adminSearch = document.getElementById('adminSearch');
 const adminFilterClear = document.getElementById('adminFilterClear');
 const statusMsg = document.getElementById("statusMsg");
 const container = document.getElementById("productContainer");
+
+// Server mode flag (set after checking /api/server-info)
+let serverReadOnly = false;
 // Toast xabarnoma funksiyasi
 // ✏️ Edit modal elementlar
 const editModal = document.getElementById("editModal");
@@ -27,6 +30,11 @@ const API_URL = (window.location.hostname === '' || window.location.hostname ===
 
 // ➕ Yangi mahsulot qo'shish (admin)
 addBtn.addEventListener("click", async () => {
+  if (serverReadOnly) {
+    showToast({ message: "Bu muhit yozish uchun mos emas — MONGODB_URI sozlang", type: 'warning' });
+    return;
+  }
+
   const name = nameInput.value.trim();
   const price = priceInput.value.trim();
   const image = imageInput.value.trim();
@@ -99,8 +107,12 @@ async function loadProducts(options = {}) {
       <p>${p.price}</p>
       <small>${p.category} · Qolgan: ${p.stock || 0} · Sotildi: ${p.sold || 0}</small><br>
 
-      <button class="edit-btn" data-id="${p.id}">✏️ Tahrirlash</button>
-      <button class="delete-btn" data-id="${p.id}">🗑 O‘chirish</button>
+      ${serverReadOnly ? `
+        <div style="margin-top:8px; color:#b71c1c; font-weight:600;">Bu deploy yozish uchun mos emas — tahrir saqlanmaydi</div>
+      ` : `
+        <button class="edit-btn" data-id="${p.id}">✏️ Tahrirlash</button>
+        <button class="delete-btn" data-id="${p.id}">🗑 O‘chirish</button>
+      `}
     `;
 
     container.appendChild(card);
@@ -162,6 +174,11 @@ async function loadProducts(options = {}) {
 
 // 💾 Tahrirni saqlash
 saveEditBtn.addEventListener("click", async () => {
+  if (serverReadOnly) {
+    showToast({ message: "Bu muhit yozish uchun mos emas — MONGODB_URI sozlang", type: 'warning' });
+    return;
+  }
+
   const updateData = {
     id: Number(editId.value),
     name: editName.value.trim(),
@@ -171,20 +188,25 @@ saveEditBtn.addEventListener("click", async () => {
     stock: Number(editStock.value) || 0,
   };
 
-  const res = await fetch(`${API_URL}/edit`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(updateData),
-  });
+  try {
+    const res = await fetch(`${API_URL}/edit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updateData),
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (data.success) {
-    showToast({ message: "Mahsulot yangilandi!", type: 'success' });
-    editModal.style.display = "none";
-    loadProducts();
-  } else {
-    showToast({ message: "Xatolik: " + data.error, type: 'error' });
+    if (data.success) {
+      showToast({ message: "Mahsulot yangilandi!", type: 'success' });
+      editModal.style.display = "none";
+      loadProducts();
+    } else {
+      showToast({ message: "Xatolik: " + (data.error || 'Noma\'lum xatolik'), type: 'error' });
+    }
+  } catch (err) {
+    console.error('Edit product error:', err);
+    showToast({ message: "Serverga ulanishda xatolik", type: 'error' });
   }
 });
 
@@ -248,8 +270,19 @@ async function checkServerInfo() {
     if (!res.ok) return;
     const info = await res.json();
     if (info.readOnlyFiles) {
-      if (statusMsg) statusMsg.innerHTML = '<strong style="color:#b71c1c">Eslatma:</strong> Bu muhit yozish uchun mos emas (suziladigan hosting). Mahsulotlar va buyurtmalarni tahrirlash uchun MONGODB_URI sozlang.';
+      serverReadOnly = true;
+      if (statusMsg) statusMsg.innerHTML = '<strong style="color:#b71c1c">Eslatma:</strong> Bu muhit yozish uchun mos emas (suziladigan hosting). Mahsulotlar va buyurtmalarni tahrirlash uchun <code>MONGODB_URI</code> sozlang.';
       showToast({ message: 'Server deployi read-only rejimda: MONGODB_URI sozlang persistence uchun', type: 'warning', timeout: 8000 });
+      // adjust UI immediately
+      addBtn.disabled = true;
+      saveEditBtn.disabled = true;
+      nameInput.disabled = true;
+      priceInput.disabled = true;
+      imageInput.disabled = true;
+      categorySelect.disabled = true;
+      document.getElementById('stock').disabled = true;
+      // reload products so the edit/delete buttons are removed and replaced with notice
+      loadProducts({ category: adminFilterCategory.value || 'Barchasi' });
     }
   } catch (err) {
     // ignore

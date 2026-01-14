@@ -7,7 +7,10 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { name, price, image, category, quantity } = req.body;
+    // Accept either `stock` (admin UI) or `quantity` (legacy)
+    const { name, price, image, category } = req.body;
+    const quantity = (typeof req.body.stock !== 'undefined') ? req.body.stock : req.body.quantity;
+
     if (!name || !price || !image || !category || quantity === undefined) {
       return res.status(400).json({ error: "Barcha maydonlarni to'ldiring" });
     }
