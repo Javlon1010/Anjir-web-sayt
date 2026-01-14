@@ -240,12 +240,14 @@ async function loadCategories() {
 // Filter va search eventlari
 adminFilterCategory.addEventListener('change', () => {
   const cat = adminFilterCategory.value;
-  loadProducts({ category: cat });
+  // If placeholder is selected (empty string), treat as 'Barchasi'
+  loadProducts({ category: cat === '' ? 'Barchasi' : cat });
 });
 
 adminSearch.addEventListener('input', () => {
   const q = adminSearch.value.trim();
-  const cat = adminFilterCategory.value;
+  const catVal = adminFilterCategory.value;
+  const cat = (typeof catVal === 'undefined' || catVal === '' ) ? 'Barchasi' : catVal;
   loadProducts({ category: cat, q });
 });
 
@@ -256,40 +258,44 @@ adminFilterClear.addEventListener('click', () => {
 });
 
 // 🚀 Dastlab yuklash
-loadCategories();
-// default: show all products in admin
-loadProducts({ category: 'Barchasi' });
-loadOrders();
-// Auto-refresh orders every 8 seconds so admin sees incoming orders
-setInterval(loadOrders, 8000);
+(async function initAdmin() {
+  try {
+    await loadCategories();
+  } catch (err) {
+    console.error('Initial loadCategories failed:', err);
+  }
 
-// Check server info (read-only deployments on platforms like Vercel)
-async function checkServerInfo() {
+  // default: show all products in admin
+  loadProducts({ category: 'Barchasi' });
+  loadOrders();
+  // Auto-refresh orders every 8 seconds so admin sees incoming orders
+  setInterval(loadOrders, 8000);
+
+  // Check server info (read-only deployments on platforms like Vercel)
   try {
     const res = await fetch('/api/server-info');
-    if (!res.ok) return;
-    const info = await res.json();
-    if (info.readOnlyFiles) {
-      serverReadOnly = true;
-      if (statusMsg) statusMsg.innerHTML = '<strong style="color:#b71c1c">Eslatma:</strong> Bu muhit yozish uchun mos emas (suziladigan hosting). Mahsulotlar va buyurtmalarni tahrirlash uchun <code>MONGODB_URI</code> sozlang.';
-      showToast({ message: 'Server deployi read-only rejimda: MONGODB_URI sozlang persistence uchun', type: 'warning', timeout: 8000 });
-      // adjust UI immediately
-      addBtn.disabled = true;
-      saveEditBtn.disabled = true;
-      nameInput.disabled = true;
-      priceInput.disabled = true;
-      imageInput.disabled = true;
-      categorySelect.disabled = true;
-      document.getElementById('stock').disabled = true;
-      // reload products so the edit/delete buttons are removed and replaced with notice
-      loadProducts({ category: adminFilterCategory.value || 'Barchasi' });
+    if (res && res.ok) {
+      const info = await res.json();
+      if (info.readOnlyFiles) {
+        serverReadOnly = true;
+        if (statusMsg) statusMsg.innerHTML = '<strong style="color:#b71c1c">Eslatma:</strong> Bu muhit yozish uchun mos emas (suziladigan hosting). Mahsulotlar va buyurtmalarni tahrirlash uchun <code>MONGODB_URI</code> sozlang.';
+        showToast({ message: 'Server deployi read-only rejimda: MONGODB_URI sozlang persistence uchun', type: 'warning', timeout: 8000 });
+        // adjust UI immediately
+        addBtn.disabled = true;
+        saveEditBtn.disabled = true;
+        nameInput.disabled = true;
+        priceInput.disabled = true;
+        imageInput.disabled = true;
+        categorySelect.disabled = true;
+        document.getElementById('stock').disabled = true;
+        // reload products so the edit/delete buttons are removed and replaced with notice
+        loadProducts({ category: adminFilterCategory.value || 'Barchasi' });
+      }
     }
   } catch (err) {
     // ignore
   }
-}
-
-checkServerInfo();
+})();
 
 // === Buyurtmalarni chiqarish va boshqarish ===
 async function loadOrders() {
