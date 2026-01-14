@@ -434,6 +434,16 @@ app.get('/api/products/categories', async (req, res) => {
   }
 });
 
+// 🔹 Server info (read-only / mongo detection) - works locally and on serverless
+app.get('/api/server-info', async (req, res) => {
+  try {
+    res.json({ useMongo: db.useMongo, readOnlyFiles: db.isReadOnly ? db.isReadOnly() : false });
+  } catch (err) {
+    console.error('GET /api/server-info error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ➕ Yangi mahsulot qo‘shish
 app.post('/api/products/add', async (req, res) => {
   try {

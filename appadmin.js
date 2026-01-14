@@ -42,7 +42,7 @@ addBtn.addEventListener("click", async () => {
   const stock = Number(document.getElementById('stock').value) || 35;
 
   if (!name || !price || !image || !category) {
-    showToast({ message: "Iltimos, hamma maydonlarni to‘ldiring", type: 'warning' });
+    showToast({ message: "Iltimos, ma'lumotlaringizni to'liq kiriting va telefon raqamingizni to'g'ri kiriting", type: 'warning' });
     return;
   }
 
@@ -276,9 +276,10 @@ adminFilterClear.addEventListener('click', () => {
     const res = await fetch('/api/server-info');
     if (res && res.ok) {
       const info = await res.json();
+
       if (info.readOnlyFiles) {
         serverReadOnly = true;
-        if (statusMsg) statusMsg.innerHTML = '<strong style="color:#b71c1c">Eslatma:</strong> Bu muhit yozish uchun mos emas (suziladigan hosting). Mahsulotlar va buyurtmalarni tahrirlash uchun <code>MONGODB_URI</code> sozlang.';
+        if (statusMsg) statusMsg.innerHTML = '<strong style="color:#b71c1c">Eslatma:</strong> Bu muhit yozish uchun mos emas (suziladigan hosting). Mahsulotlar va buyurtmalarni buyurtmalarni tahrirlash uchun <code>MONGODB_URI</code> sozlang.';
         showToast({ message: 'Server deployi read-only rejimda: MONGODB_URI sozlang persistence uchun', type: 'warning', timeout: 8000 });
         // adjust UI immediately
         addBtn.disabled = true;
@@ -290,12 +291,51 @@ adminFilterClear.addEventListener('click', () => {
         document.getElementById('stock').disabled = true;
         // reload products so the edit/delete buttons are removed and replaced with notice
         loadProducts({ category: adminFilterCategory.value || 'Barchasi' });
+        return;
+      }
+
+      if (!info.useMongo) {
+        if (statusMsg) statusMsg.innerHTML = '<strong style="color:#b71c1c">Eslatma:</strong> MONGODB_URI topilmadi — maʼlumotlar faylga yozilmoqda (bu deployda yozish muammoli).';
+        showToast({ message: 'MONGODB_URI mavjud emas — yozish rejimi cheklangan', type: 'warning', timeout: 8000 });
+        return;
+      }
+
+      if (info.useMongo && info.dbConnected === false) {
+        if (statusMsg) statusMsg.innerHTML = `<strong style="color:#b71c1c">DB xatosi:</strong> ${info.dbError || 'bog‘lanishda xatolik'} <button id="dbTestBtn" class="btn">Qayta tekshirish</button>`;
+        showToast({ message: 'MongoDB bilan bog‘lanishda xatolik: tekshiring', type: 'error', timeout: 8000 });
+        setTimeout(() => {
+          const btn = document.getElementById('dbTestBtn');
+          if (btn) btn.addEventListener('click', testDb);
+        }, 0);
+        return;
+      }
+
+      if (info.useMongo && info.dbConnected === true) {
+        if (statusMsg) statusMsg.innerHTML = '<strong style="color:#2e7d32">DB: bog‘langan</strong>';
       }
     }
   } catch (err) {
     // ignore
   }
 })();
+
+// DB re-check function (used when server-info reports DB error)
+async function testDb() {
+  try {
+    const res = await fetch('/api/db-test');
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      showToast({ message: 'MongoDB: ulangan', type: 'success' });
+      if (statusMsg) statusMsg.innerHTML = '<strong style="color:#2e7d32">DB: bog‘langan</strong>';
+      loadProducts({ category: adminFilterCategory.value || 'Barchasi' });
+    } else {
+      showToast({ message: 'DB xatosi: ' + (data.message || 'Nomaʼlum xato'), type: 'error' });
+      if (statusMsg) statusMsg.innerHTML = `<strong style="color:#b71c1c">DB xatosi:</strong> ${data.message || 'xato'}`;
+    }
+  } catch (err) {
+    showToast({ message: 'Serverga ulanishda xatolik', type: 'error' });
+  }
+}
 
 // === Buyurtmalarni chiqarish va boshqarish ===
 async function loadOrders() {
