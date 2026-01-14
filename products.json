@@ -747,5 +747,27 @@
     "price": "70 000 so'm",
     "image": "https://olcha.uz/image/700x700/products/cdn_1/supplier/stores/1/2024-05-30/6gUaWH7gm2bXiPiJCRpDCpwpNEODxOXd0Cv0Pl0Tz3Wn6gMR3WbcdPgjds6I.jpg",
     "category": "Bolalar mahsulotlari"
+  },
+  {
+    "id": 1768302253343,
+    "name": "ORDERTEST-1768302253339",
+    "price": "500",
+    "image": "img/placeholder.png",
+    "category": "Test",
+    "stock": 1,
+    "sold": 2,
+    "createdAt": "2026-01-13T11:04:13.343Z",
+    "updatedAt": "2026-01-13T11:04:13.344Z"
+  },
+  {
+    "id": 1768302638725,
+    "name": "COMPLETE-1768302638723",
+    "price": "200",
+    "image": "img/placeholder.png",
+    "category": "Test",
+    "stock": 2,
+    "sold": 3,
+    "createdAt": "2026-01-13T11:10:38.725Z",
+    "updatedAt": "2026-01-13T11:10:38.726Z"
   }
 ]

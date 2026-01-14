@@ -1,5 +1,4 @@
-const { connect } = require('../../lib/mongoose');
-const Product = require('../../models/Product');
+const { deleteProduct } = require('../../lib/db');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -11,9 +10,7 @@ module.exports = async function handler(req, res) {
     const { id } = req.body;
     if (typeof id === 'undefined') return res.status(400).json({ error: 'id required' });
 
-    await connect();
-    const idNum = Number(id);
-    await Product.findOneAndDelete({ id: idNum });
+    await deleteProduct(id);
 
     res.status(200).json({ success: true });
   } catch (err) {

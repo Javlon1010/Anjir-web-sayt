@@ -1,5 +1,4 @@
-const { connect } = require('../../lib/mongoose');
-const Product = require('../../models/Product');
+const { addProduct } = require('../../lib/db');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -18,19 +17,9 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: "Noto'g'ri miqdor kiritildi" });
     }
 
-    await connect();
-    const newProduct = new Product({ 
-      id: Date.now(), 
-      name, 
-      price, 
-      image, 
-      category,
-      quantity: quantityNum,
-      outOfStock: quantityNum <= 0
-    });
-    await newProduct.save();
+    const product = await addProduct({ name, price, image, category, stock: quantityNum });
 
-    res.status(201).json({ success: true, product: newProduct });
+    res.status(201).json({ success: true, product });
   } catch (err) {
     console.error('POST /api/products/add error:', err);
     res.status(500).json({ error: 'Server error' });

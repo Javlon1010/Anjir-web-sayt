@@ -1,5 +1,4 @@
-const { connect } = require('../../lib/mongoose');
-const Order = require('../../models/Order');
+const { completeOrder } = require('../../lib/db');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -13,20 +12,12 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: "Buyurtma ID si ko'rsatilmagan" });
     }
 
-    await connect();
-    const order = await Order.findOne({ id: orderId });
-    
-    if (!order) {
-      return res.status(404).json({ error: 'Buyurtma topilmadi' });
-    }
+    const order = await completeOrder(orderId);
 
-    // Complete the order and update product quantities
-    await order.completeOrder();
-    
     res.status(200).json({ 
       success: true, 
       message: 'Buyurtma muvaffaqiyatli yakunlandi',
-      orderNumber: order.orderNumber
+      orderNumber: order.orderNumber || order.id
     });
   } catch (err) {
     console.error('POST /api/orders/complete error:', err);

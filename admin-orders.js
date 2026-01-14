@@ -53,8 +53,6 @@ async function loadOrders(showCompleted = false) {
             <div class="order-status" style="background-color: ${statusInfo.color}20; color: ${statusInfo.color};">
               ${statusInfo.name}
             </div>
-          </div>
-          
           <div class="order-customer">
             <p><strong>👤 Mijoz:</strong> ${order.name}</p>
             <p><strong>📞 Telefon:</strong> ${order.phone}</p>
@@ -78,7 +76,15 @@ async function loadOrders(showCompleted = false) {
                 ${order.cart.map((item, index) => `
                   <tr>
                     <td>${index + 1}</td>
-                    <td>${item.name}</td>
+                    <td>
+                      <button class="item-btn" data-order-id="${order.id}" data-item-idx="${index}" ${item.status==='delivered' ? 'disabled' : ''}>
+                        ${item.name} ${item.status==='delivered' ? ' ✅' : (item.status==='not_found' ? ' ❌' : '')}
+                      </button>
+                      <div class="item-actions" data-order-id="${order.id}" data-item-idx="${index}" style="display:none; margin-top:8px;">
+                        <button class="item-action-btn green item-action-delivered" data-order-id="${order.id}" data-item-idx="${index}">✅ Mahsulot berildi</button>
+                        <button class="item-action-btn red item-action-notfound" data-order-id="${order.id}" data-item-idx="${index}">${item.status==='not_found' ? '🔁 Bekor qilish' : '❌ Mahsulot topilmadi'}</button>
+                      </div>
+                    </td>
                     <td>${item.price} so'm</td>
                     <td>${item.quantity || 1} ta</td>
                     <td>${(parseInt(item.price.replace(/\D/g, '')) * (item.quantity || 1)).toLocaleString()} so'm</td>
@@ -224,7 +230,95 @@ function attachEventListeners() {
       }
     });
   });
-  
+
+  // Item button toggle (show/hide action buttons)
+  document.querySelectorAll('.item-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const orderId = btn.getAttribute('data-order-id');
+      const idx = btn.getAttribute('data-item-idx');
+      const panel = document.querySelector(`.item-actions[data-order-id="${orderId}"][data-item-idx="${idx}"]`);
+      if (!panel) return;
+      panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'block' : 'none';
+    });
+  });
+
+  // Delivered action
+  document.querySelectorAll('.item-action-delivered').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const orderId = btn.getAttribute('data-order-id');
+      const idx = Number(btn.getAttribute('data-item-idx'));
+      try {
+        const res = await fetch(`${API_BASE}/api/orders/item-update`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, itemId: idx, status: 'delivered' })
+        });
+        const data = await res.json();
+        if (!data || !data.success) {
+          showToast({ message: 'Xatolik: ' + (data && data.error ? data.error : 'Noma\'lum xato'), type: 'error' });
+          return;
+        }
+        if (data.already) {
+          showToast({ message: 'Allaqachon belgilangan', type: 'info' });
+          return;
+        }
+        // update UI: set base name and add ✅
+        const btnSel = document.querySelector(`.item-btn[data-order-id="${orderId}"][data-item-idx="${idx}"]`);
+        if (btnSel) {
+          const base = btnSel.textContent.replace(/ ✅| ❌/g, '').trim();
+          btnSel.textContent = `${base} ✅`;
+          btnSel.disabled = true;
+          btnSel.classList.remove('not-found');
+          btnSel.classList.add('delivered');
+        }
+        const panel = document.querySelector(`.item-actions[data-order-id="${orderId}"][data-item-idx="${idx}"]`);
+        if (panel) panel.style.display = 'none';
+        showToast({ message: 'Mahsulot belgilandi ✅', type: 'success' });
+      } catch (err) {
+        console.error(err);
+        showToast({ message: 'Serverga ulanishda xatolik', type: 'error' });
+      }
+    });
+  });
+
+  // Not found action (toggle)
+  document.querySelectorAll('.item-action-notfound').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const orderId = btn.getAttribute('data-order-id');
+      const idx = Number(btn.getAttribute('data-item-idx'));
+      try {
+        const res = await fetch(`${API_BASE}/api/orders/item-update`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, itemId: idx, status: 'not_found' })
+        });
+        const data = await res.json();
+        if (!data || !data.success) {
+          showToast({ message: 'Xatolik: ' + (data && data.error ? data.error : 'Noma\'lum xato'), type: 'error' });
+          return;
+        }
+        // update UI: toggle ❌ based on returned status
+        const btnSel = document.querySelector(`.item-btn[data-order-id="${orderId}"][data-item-idx="${idx}"]`);
+        const panel = document.querySelector(`.item-actions[data-order-id="${orderId}"][data-item-idx="${idx}"]`);
+        if (btnSel) {
+          const base = btnSel.textContent.replace(/ ✅| ❌/g, '').trim();
+          if (data.itemStatus === 'not_found') {
+            btnSel.textContent = `${base} ❌`;
+            btnSel.classList.remove('delivered');
+            btnSel.classList.add('not-found');
+            btnSel.disabled = false;
+          } else {
+            btnSel.textContent = base;
+            btnSel.classList.remove('not-found');
+          }
+        }
+        if (panel) panel.style.display = 'none';
+        showToast({ message: data.itemStatus === 'not_found' ? 'Mahsulot topilmadi ❌' : 'Belgisi olib tashlandi', type: 'info' });
+      } catch (err) {
+        console.error(err);
+        showToast({ message: 'Serverga ulanishda xatolik', type: 'error' });
+      }
+    });
+  });
+
   // Toggle order details
   document.querySelectorAll('.order-header').forEach(header => {
     header.addEventListener('click', (e) => {

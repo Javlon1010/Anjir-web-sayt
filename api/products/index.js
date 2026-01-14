@@ -1,5 +1,4 @@
-const { connect } = require('../../lib/mongoose');
-const Product = require('../../models/Product');
+const { getProducts } = require('../../lib/db');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -8,8 +7,8 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    await connect();
-    const products = await Product.find().sort({ createdAt: -1 });
+    const { category, q } = req.query || {};
+    const products = await getProducts({ category, q });
     res.status(200).json(products);
   } catch (err) {
     console.error('GET /api/products error:', err);

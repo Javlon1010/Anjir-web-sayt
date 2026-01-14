@@ -23,32 +23,7 @@
 
   <main class="container">
 
-    <!-- ADD PRODUCT -->
-    <section class="card">
-      <h2>➕ Yangi mahsulot qo‘shish</h2>
 
-      <input type="text" id="name" placeholder="Mahsulot nomi">
-      <input type="text" id="price" placeholder="Narxi (12,000 so‘m)">
-      <input type="text" id="image" placeholder="Rasm URL manzili">
-      <input type="number" id="stock" min="0" value="35" placeholder="Soni (default 35)">
-
-      <select id="category">
-        <option value="">Kategoriyani tanlang</option>
-        <option value="Ichimliklar">Ichimliklar</option>
-        <option value="Mevalar">Mevalar</option>
-        <option value="Sabzavotlar">Sabzavotlar</option>
-        <option value="Go‘sht mahsulotlari">Go‘sht mahsulotlari</option>
-        <option value="Sut mahsulotlari">Sut mahsulotlari</option>
-        <option value="Shirinliklar">Shirinliklar</option>
-        <option value="Gazaklar">Gazaklar</option>
-        <option value="Uy-ro‘zg‘or va tozalovchi vositalar">Uy-ro‘zg‘or</option>
-        <option value="Kosmetika va gigiyena">Kosmetika</option>
-        <option value="Bolalar mahsulotlari">Bolalar</option>
-      </select>
-
-      <button id="addBtn" class="btn green">Qo‘shish</button>
-      <p id="statusMsg"></p>
-    </section>
 
     <!-- EDIT MODAL -->
     <div id="editModal" class="modal">
@@ -94,10 +69,21 @@
       <div id="productContainer" class="grid"></div>
     </section>
 
-    <!-- ORDERS -->
+    <!-- ADD PRODUCT (moved to bottom) -->
     <section class="card">
-      <h2>📥 Buyurtmalar</h2>
-      <div id="ordersContainer"></div>
+      <h2>➕ Yangi mahsulot qo‘shish</h2>
+
+      <input type="text" id="name" placeholder="Mahsulot nomi">
+      <input type="text" id="price" placeholder="Narxi (12,000 so‘m)">
+      <input type="text" id="image" placeholder="Rasm URL manzili">
+      <input type="number" id="stock" min="0" value="35" placeholder="Soni (default 35)">
+
+      <select id="category">
+        <option value="">Kategoriyani tanlang</option>
+      </select>
+
+      <button id="addBtn" class="btn green">Qo‘shish</button>
+      <p id="statusMsg"></p>
     </section>
 
   </main>

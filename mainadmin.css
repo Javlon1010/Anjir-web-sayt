@@ -187,6 +187,19 @@ body {
   .order-card select { width: auto; display: inline-block; margin-right: 8px; }
   .update-order { background: #2e7d32; padding: 6px 10px; border-radius: 6px; color: white; }
 
+  .item-actions { display: flex; gap: 8px; margin-top: 6px; }
+  .order-items { overflow-x: auto; }
+  .order-items table { min-width: 720px; width: 100%; border-collapse: collapse; }
+
+  .order-card h3 {
+    margin: 0 0 6px 0;
+    font-size: 1.05rem;
+  }
+
+  .order-card p { margin: 4px 0; font-size: 0.95rem; }
+  .order-card select { width: auto; display: inline-block; margin-right: 8px; }
+  .update-order { background: #2e7d32; padding: 6px 10px; border-radius: 6px; color: white; }
+
   
   input, select {
     width: 100%;
@@ -207,6 +220,8 @@ body {
   
   .green { background: #2ea043; }
   .red { background: #c73030; }
+
+  .order-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
   
   .grid {
     display: grid;
@@ -287,4 +302,29 @@ body {
   .toast-info { border-left: 5px solid #1976d2; }
   .toast-warning { border-left: 5px solid #f57c00; }
   .toast-error { border-left: 5px solid #c62828; }
+
+  /* Item buttons and actions in orders */
+  .item-btn {
+    background: #fff;
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .item-btn[disabled] { opacity: 0.7; cursor: not-allowed; }
+  .item-actions { display: flex; gap: 8px; margin-top: 6px; }
+  .item-action-btn { padding: 6px 10px; border-radius: 8px; color: #fff; border: none; cursor: pointer; }
+  .item-action-btn.green { background: var(--success); }
+  .item-action-btn.red { background: var(--danger); }
+  @media (max-width: 900px) {
+    .item-actions { flex-direction: column; align-items: stretch; }
+    .item-action-btn { width: 100%; }
+  }
+
+  /* make order tables responsive */
+  .order-items { overflow-x: auto; }
+  .order-items table { min-width: 720px; width: 100%; border-collapse: collapse; }
+  .order-items th, .order-items td { padding: 8px 10px; border-bottom: 1px solid #f1f1f1; text-align: left; }
   

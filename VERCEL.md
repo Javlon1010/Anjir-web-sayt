@@ -16,6 +16,7 @@ Deploying to Vercel — quick notes
 
 4) Notes
 - `lib/mongoose.js` uses a connection cache to avoid multiple connections on serverless platforms.
+- The project no longer defaults to a local MongoDB. If `MONGODB_URI` is not set, the app falls back to filesystem storage using `products.json` and `orders.json`.
 - Make sure the `MONGODB_URI` has access to your IPs if using a self-hosted database or correct whitelist settings on Atlas.
 
 5) Security note
