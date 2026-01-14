@@ -6,7 +6,10 @@ let products = [];
 // 🟢 Mahsulotlarni yuklash
 async function loadProducts() {
   try {
-    const res = await fetch("http://localhost:3000/api/products");
+    const API_BASE = (window.location.hostname === '' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:3000/api/products'
+      : '/api/products';
+    const res = await fetch(API_BASE);
     products = await res.json();
     displayProducts(products);
   } catch (err) {
