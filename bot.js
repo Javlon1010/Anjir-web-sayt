@@ -60,7 +60,30 @@ if (bot) {
 app.use(cors());
 app.use(bodyParser.json());
 
-// 🔸 Serve static files (so you can open admin and product pages via http://localhost:3000)
+// � Admin Panel Password Protection Middleware
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '12';
+const adminAuthMiddleware = (req, res, next) => {
+  // Check if request is for admin API
+  if (req.path.startsWith('/api/products') || req.path.startsWith('/api/orders')) {
+    // GET requests don't need auth, only POST/PUT/DELETE
+    if (req.method === 'GET') {
+      return next();
+    }
+    
+    // For admin operations, check password
+    const password = req.headers['x-admin-password'] || req.body?.adminPassword;
+    
+    if (!password || password !== ADMIN_PASSWORD) {
+      return res.status(401).json({ error: 'Parol noto\'g\'ri yoki mavjud emas', success: false });
+    }
+  }
+  
+  next();
+};
+
+app.use(adminAuthMiddleware);
+
+// �🔸 Serve static files (so you can open admin and product pages via http://localhost:3000)
 app.use(express.static(__dirname));
 
 // 🗂 Fayllar mavjud bo‘lishi kerak

@@ -3,6 +3,17 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
 // Server mode flag (set by /api/server-info)
 let serverReadOnly = false;
 
+// Admin Password (prompted from user)
+let adminPassword = '12';
+
+// Helper function to get auth headers
+function getAuthHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'x-admin-password': adminPassword
+  };
+}
+
 // Status colors and their order
 const statuses = [
   { id: 'Yangi', name: 'Yangi', color: '#ffeb3b', next: 'Qabul qilindi' },
@@ -166,17 +177,18 @@ function attachEventListeners() {
       const nextStatus = e.target.getAttribute('data-next');
       
       try {
-        const response = await fetch(`${API_BASE}/api/orders/${orderId}/status`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: nextStatus })
+        const response = await fetch(`${API_BASE}/api/orders/update`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ id: orderId, status: nextStatus })
         });
         
         if (response.ok) {
           showToast({ message: 'Buyurtma holati yangilandi', type: 'success' });
           loadOrders(document.querySelector('.tab.active')?.dataset.tab === 'completed');
         } else {
-          throw new Error('Failed to update status');
+          const errorData = await response.json();
+          showToast({ message: errorData.error || 'Xatolik yuz berdi', type: 'error' });
         }
       } catch (error) {
         console.error('Error updating order status:', error);
@@ -193,17 +205,18 @@ function attachEventListeners() {
       const orderId = e.target.getAttribute('data-id');
       
       try {
-        const response = await fetch(`${API_BASE}/api/orders/${orderId}/status`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'Bekor qilindi' })
+        const response = await fetch(`${API_BASE}/api/orders/update`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ id: orderId, status: 'Bekor qilindi' })
         });
         
         if (response.ok) {
           showToast({ message: 'Buyurtma bekor qilindi', type: 'success' });
           loadOrders(document.querySelector('.tab.active')?.dataset.tab === 'completed');
         } else {
-          throw new Error('Failed to cancel order');
+          const errorData = await response.json();
+          showToast({ message: errorData.error || 'Xatolik yuz berdi', type: 'error' });
         }
       } catch (error) {
         console.error('Error cancelling order:', error);
@@ -222,7 +235,7 @@ function attachEventListeners() {
       try {
         const response = await fetch(`${API_BASE}/api/orders/complete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ orderId })
         });
         
@@ -265,7 +278,8 @@ function attachEventListeners() {
       const idx = Number(btn.getAttribute('data-item-idx'));
       try {
         const res = await fetch(`${API_BASE}/api/orders/item-update`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+          headers: getAuthHeaders(),
           body: JSON.stringify({ orderId, itemId: idx, status: 'delivered' })
         });
         const data = await res.json();
@@ -303,7 +317,8 @@ function attachEventListeners() {
       const idx = Number(btn.getAttribute('data-item-idx'));
       try {
         const res = await fetch(`${API_BASE}/api/orders/item-update`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+          headers: getAuthHeaders(),
           body: JSON.stringify({ orderId, itemId: idx, status: 'not_found' })
         });
         const data = await res.json();
@@ -363,6 +378,9 @@ async function checkServerInfo() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Get admin password from user
+  adminPassword = prompt('Admin panelga kirish uchun parolni kiriting:') || '12';
+  
   // Tabs
   const tabs = document.querySelectorAll('.tab');
   tabs.forEach(tab => {
@@ -377,8 +395,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   await checkServerInfo();
   loadOrders();
   
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 10-15 seconds
   setInterval(() => {
     loadOrders(document.querySelector('.tab.active')?.dataset.tab === 'completed');
-  }, 30000);
+  }, 12000);
 });

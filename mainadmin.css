@@ -328,3 +328,24 @@ body {
   .order-items table { min-width: 720px; width: 100%; border-collapse: collapse; }
   .order-items th, .order-items td { padding: 8px 10px; border-bottom: 1px solid #f1f1f1; text-align: left; }
   
+  /* Tabs */
+  .tab {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    color: var(--text-light);
+  }
+
+  .tab.active {
+    color: var(--success);
+    border-bottom-color: var(--success);
+  }
+
+  .tab:hover {
+    color: var(--success);
+  }

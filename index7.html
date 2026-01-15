@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin — Buyurtmalar</title>
   <link rel="stylesheet" href="mainadmin.css" />
+  <script src="notify.js" defer></script>
   <script src="admin-orders.js" defer></script>
 </head>
 <body>
@@ -17,8 +18,17 @@
 
   <main class="container">
     <section class="card">
-      <h2>Buyurtma ro‘yxati</h2>
-      <div id="ordersContainer"></div>
+      <h2>Buyurtma ro‘yxati</h2>      
+      <!-- Tabs -->
+      <div style="margin-bottom: 20px; border-bottom: 2px solid #ddd;">
+        <button class="tab active" data-tab="active" style="padding: 10px 20px; background: none; border: none; cursor: pointer; font-size: 16px; font-weight: bold; border-bottom: 3px solid #4caf50;">
+          📋 Faol Buyurtmalar
+        </button>
+        <button class="tab" data-tab="completed" style="padding: 10px 20px; background: none; border: none; cursor: pointer; font-size: 16px; font-weight: bold; border-bottom: 3px solid transparent;">
+          ✅ Tugallangan
+        </button>
+      </div>
+            <div id="ordersContainer"></div>
     </section>
   </main>
 </body>

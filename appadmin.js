@@ -11,6 +11,18 @@ const container = document.getElementById("productContainer");
 
 // Server mode flag (set after checking /api/server-info)
 let serverReadOnly = false;
+
+// Admin Password (get from user on load or default)
+let adminPassword = '';
+
+// Helper function to get auth headers
+function getAuthHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'x-admin-password': adminPassword
+  };
+}
+
 // Toast xabarnoma funksiyasi
 // ✏️ Edit modal elementlar
 const editModal = document.getElementById("editModal");
@@ -51,7 +63,7 @@ addBtn.addEventListener("click", async () => {
   try {
     const res = await fetch(`${API_URL}/add`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ name, price, image, category, stock }),
     });
 
@@ -126,7 +138,7 @@ async function loadProducts(options = {}) {
       try {
         const res = await fetch(`${API_URL}/delete`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ id }),
         });
         const data = await res.json();
@@ -191,7 +203,7 @@ saveEditBtn.addEventListener("click", async () => {
   try {
     const res = await fetch(`${API_URL}/edit`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify(updateData),
     });
 
@@ -401,3 +413,14 @@ async function loadOrders() {
     }
   }
 }
+
+// Initialize admin password on page load
+document.addEventListener('DOMContentLoaded', () => {
+  adminPassword = prompt('Admin panelga kirish uchun parolni kiriting:') || '';
+  if (!adminPassword) {
+    adminPassword = ''; // Will require password for actions
+    showToast({ message: '⚠️ Parol kiritmadi. Admin amallar uchun parol talab qilinadi.', type: 'warning' });
+  }
+  loadCategories();
+  loadProducts();
+});
