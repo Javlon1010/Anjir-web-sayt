@@ -1,5 +1,4 @@
 const { useMongo } = require('../lib/db');
-const { connect } = require('../lib/mongoose');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -10,6 +9,7 @@ module.exports = async function handler(req, res) {
   try {
     if (!useMongo) return res.status(200).json({ ok: false, message: 'MongoDB disabled (MONGODB_URI not set)' });
     try {
+      const { connect } = require('../lib/mongoose');
       await connect();
       return res.json({ ok: true, message: 'MongoDB connection OK' });
     } catch (err) {

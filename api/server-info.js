@@ -1,5 +1,4 @@
 const { useMongo, isReadOnly } = require('../lib/db');
-const { connect } = require('../lib/mongoose');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -11,6 +10,7 @@ module.exports = async function handler(req, res) {
     const info = { useMongo: !!useMongo, readOnlyFiles: !!isReadOnly(), dbConnected: null, dbError: null };
     if (useMongo) {
       try {
+        const { connect } = require('../lib/mongoose');
         await connect();
         info.dbConnected = true;
       } catch (err) {

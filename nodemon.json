@@ -1,0 +1,7 @@
+{
+  "watch": ["bot.js", "lib/", "api/", "models/"],
+  "ignore": ["node_modules", "products.json", "orders.json", "counters.json", "*.html", "*.css"],
+  "ext": "js",
+  "exec": "node bot.js",
+  "delay": 500
+}
